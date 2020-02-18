@@ -1,21 +1,35 @@
-    ORG 0000H
+    EXTRN CODE(OS_Main)	
+	EXTRN CODE(OS_taskDispatch)
+	D_ITRPT_COUNT DATA 10H;中断次数
+	D_p_TASKs_STK DATA 11H;任务地址栈指针
+	D_TASKs_COUNT DATA 12H;任务数
+	D_RN_TASK_IDX DATA 13H;当前任务下标
+	D_pTAK_RM_STK DATA 14H;任务数据栈指针	
+	
+	C_MAIN_SP_SRT EQU 70H;默认栈数据起始地址
+	C_TASKs_STK_S EQU 20H;任务数地址栈起始地址
+	C_TASKs_RAM_S EQU 30H;任务数据起始地址	
+	C_sgTAK_RM_CT EQU 10H;单个任务最大数据量
+	C_sgTAK_SP_SR EQU 50H;任务栈数据起始地址
+	C_sgTAK_SP_CT EQU 10H;单个任务栈最大数据量
+	
+	
+	ORG 0000H
     LJMP START
     ORG 000BH
     LJMP Timer0Interrupt
 
 START:
-    MOV SP,#60H
+    MOV SP,#C_MAIN_SP_SRT
 	MOV P1,#00H
-	MOV 30H,#00H;中断次数
-	MOV 31H,#40H;任务数组栈指针
-	MOV 32H,#00H;任务数
-	MOV 33H,#00H;当前任务下标
-	LCALL AddTasks
+	MOV D_ITRPT_COUNT,#00H;中断次数
+	MOV D_p_TASKs_STK,#C_TASKs_STK_S;任务数组栈指针
+	MOV D_TASKs_COUNT,#00H;任务数
+	MOV D_RN_TASK_IDX,#00H;当前任务下标	
+	LCALL OS_Main
 	LCALL InitTimer0
+	LJMP TaskDispatch
 
-LOOP:
-         ;add your code here!
-    LJMP LOOP
 
 InitTimer0:
     MOV TMOD,#01H
@@ -25,91 +39,53 @@ InitTimer0:
     SETB ET0
     SETB TR0
     RET
-	
-Sleep:   
-    MOV R7,#0A7H
-DL1:
-    MOV R6,#0ABH
-DL0:
-    MOV R5,#10H
-    DJNZ R5,$
-    DJNZ R6,DL0
-    DJNZ R7,DL1
-    NOP
-	RET
-
-AddTasks:
-	MOV R6,#LOW(Task1)
-	MOV R7,#HIGH(Task1)
-	LCALL AddTask
-	MOV R6,#LOW(Task2)
-	MOV R7,#HIGH(Task2)
-	LCALL AddTask
-	RET
-
-;接收1个uint参数,参数地址：R6,R7
-AddTask:	
-	;获取任务数组指针
-	MOV R0,31H
-	;参数的低字节存入指针位置
-	MOV A, R6	
-	MOV @R0, A
-	;指针位置++
-	INC R0	
-	;参数的高字节存入指针位置
-	MOV A, R7
-	MOV @R0, A
-	;指针位置++
-	INC R0
-	;将指针位置赋值回31H
-	MOV 31H,R0
-	;任务数++
-	INC 32H
-	RET
-
-Task1:  
-	CPL P1.0
-	LCALL Sleep
-	LJMP Task1	
-	
-Task2:	
-	CPL P1.1
-	LCALL Sleep
-	LJMP Task2	
 
 TaskDispatch:	
-	MOV A,33H
-	CJNE A,32H,TaskDispatchNEXT;IF(当前任务下标==任务总数){
-	MOV 33H,#00H
-TaskDispatchNEXT:	;}else{
-	;当前任务下标x2(左移实现)
-	MOV A,33H;
-	RL A
-	;40H+当前任务数
-	ADD A,#40H
-	;准备要执行的任务地址（低8位）赋值给DPL
-	MOV R0,A
-	MOV A,@R0
-	MOV DPL,A
-	;准备要执行的任务地址（低8位）赋值给DPL
-	;R0++
-	INC R0
-	MOV A,@R0
-	MOV DPH,A
-	;根据DPTR的地址进行跳转
-	MOV A,#00H
-	INC 33H
-	JMP @A+DPTR		
+	LJMP OS_taskDispatch
+
+;将当前任务单个数据入栈保护
+;参数存放：A
+PushTaskData:	
+	PUSH ACC
+	;MOV (任务数据起始地址 + 当前任务下标*单个任务所占用的最大数据量) + 当前任务数据栈指针
+	;MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
+	MOV A,D_RN_TASK_IDX
+	MOV B,#C_sgTAK_RM_CT
+	MUL AB					;D_RN_TASK_IDX*C_sgTAK_RM_CT
+	ADD A,#C_TASKs_RAM_S	;(C_TASKs_RAM_S + AND)
+	ADD A,D_pTAK_RM_STK		;AND + D_pTAK_RM_STK
+	MOV R1,A
+	POP ACC
+	MOV @R1,A
+	INC D_pTAK_RM_STK	
 	RET
 	
-Timer0Interrupt:    
+Timer0Interrupt: 
     MOV TH0,#00H
     MOV TL0,#00H
-    MOV P2,30H;显示当前任务数于P2口
-	INC 30H;中断次数++
-	DEC SP
-	DEC SP
-	;将调度函数入口地址入栈
+	;切换寄存器组到第0区
+	CLR RS0	
+    MOV P2,D_ITRPT_COUNT;显示当前任务数于P2口
+	INC D_ITRPT_COUNT;中断次数++
+	MOV D_pTAK_RM_STK, #00H;对任务数据栈指针清0
+	;当前ACC入任务栈保护
+	LCALL PushTaskData
+	;当前PSW入任务栈保护
+	MOV ACC,PSW
+	LCALL PushTaskData	
+	;当前CP指针位置入任务栈保护
+	POP ACC
+	MOV R0,ACC
+	POP ACC
+	LCALL PushTaskData
+	MOV A,R0
+	LCALL PushTaskData
+	;当前SP指针位置入任务栈保护
+	MOV A,SP
+	LCALL PushTaskData	
+	;切换堆栈指针指向主栈
+	MOV SP,#C_MAIN_SP_SRT
+	;将调度函数入口地址入栈	
 	MOV A,#LOW(TaskDispatch)
 	PUSH ACC
 	MOV A,#HIGH(TaskDispatch)

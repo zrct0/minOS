@@ -1,0 +1,598 @@
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.02b
+OBJECT MODULE PLACED IN os.OBJ
+ASSEMBLER INVOKED BY: D:\c51\c51v952\C51\BIN\A51.EXE os.src PR(.\os.ls1) EP DEBUG
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     ; .\os.SRC generated from: os.c
+                       2     ; COMPILER INVOKED BY:
+                       3     ;        D:\c51\c51v952\C51\BIN\C51.EXE os.c BROWSE DEBUG OBJECTEXTEND TABS(2) SRC(.\os.SRC
+                             )
+                       4     
+                       5     $nomod51 
+                       6     
+                       7     NAME    OS
+                       8     
+  0080                 9     P0      DATA    080H
+  0090                10     P1      DATA    090H
+  00A0                11     P2      DATA    0A0H
+  00B0                12     P3      DATA    0B0H
+  00B4                13     T0      BIT     0B0H.4
+  00D6                14     AC      BIT     0D0H.6
+  00B5                15     T1      BIT     0B0H.5
+  0090                16     T2      BIT     090H.0
+  00AF                17     EA      BIT     0A8H.7
+  00A8                18     IE      DATA    0A8H
+  00CE                19     EXF2    BIT     0C8H.6
+  00B7                20     RD      BIT     0B0H.7
+  00AC                21     ES      BIT     0A8H.4
+  00B8                22     IP      DATA    0B8H
+  0098                23     RI      BIT     098H.0
+  00B2                24     INT0    BIT     0B0H.2
+  00D7                25     CY      BIT     0D0H.7
+  0099                26     TI      BIT     098H.1
+  00B3                27     INT1    BIT     0B0H.3
+  00CB                28     RCAP2H  DATA    0CBH
+  00BC                29     PS      BIT     0B8H.4
+  0081                30     SP      DATA    081H
+  0091                31     T2EX    BIT     090H.1
+  00D2                32     OV      BIT     0D0H.2
+  00CA                33     RCAP2L  DATA    0CAH
+  00C9                34     C_T2    BIT     0C8H.1
+  00B6                35     WR      BIT     0B0H.6
+  00CD                36     RCLK    BIT     0C8H.5
+  00CC                37     TCLK    BIT     0C8H.4
+  0099                38     SBUF    DATA    099H
+  0087                39     PCON    DATA    087H
+  0098                40     SCON    DATA    098H
+  0089                41     TMOD    DATA    089H
+  0088                42     TCON    DATA    088H
+  0089                43     IE0     BIT     088H.1
+  008B                44     IE1     BIT     088H.3
+  00F0                45     B       DATA    0F0H
+  00C8                46     CP_RL2  BIT     0C8H.0
+  00E0                47     ACC     DATA    0E0H
+  00A9                48     ET0     BIT     0A8H.1
+  00AB                49     ET1     BIT     0A8H.3
+  008D                50     TF0     BIT     088H.5
+  00AD                51     ET2     BIT     0A8H.5
+  008F                52     TF1     BIT     088H.7
+  00CF                53     TF2     BIT     0C8H.7
+  009A                54     RB8     BIT     098H.2
+  008C                55     TH0     DATA    08CH
+  00A8                56     EX0     BIT     0A8H.0
+  0088                57     IT0     BIT     088H.0
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     2
+
+  008D                58     TH1     DATA    08DH
+  009B                59     TB8     BIT     098H.3
+  00AA                60     EX1     BIT     0A8H.2
+  008A                61     IT1     BIT     088H.2
+  00CD                62     TH2     DATA    0CDH
+  00D0                63     P       BIT     0D0H.0
+  009F                64     SM0     BIT     098H.7
+  008A                65     TL0     DATA    08AH
+  009E                66     SM1     BIT     098H.6
+  008B                67     TL1     DATA    08BH
+  009D                68     SM2     BIT     098H.5
+  00CC                69     TL2     DATA    0CCH
+  00B9                70     PT0     BIT     0B8H.1
+  00BB                71     PT1     BIT     0B8H.3
+  00D3                72     RS0     BIT     0D0H.3
+  00BD                73     PT2     BIT     0B8H.5
+  008C                74     TR0     BIT     088H.4
+  00D4                75     RS1     BIT     0D0H.4
+  008E                76     TR1     BIT     088H.6
+  00CA                77     TR2     BIT     0C8H.2
+  00B8                78     PX0     BIT     0B8H.0
+  00BA                79     PX1     BIT     0B8H.2
+  0083                80     DPH     DATA    083H
+  0082                81     DPL     DATA    082H
+  00CB                82     EXEN2   BIT     0C8H.3
+  009C                83     REN     BIT     098H.4
+  00C8                84     T2CON   DATA    0C8H
+  00B0                85     RXD     BIT     0B0H.0
+  00B1                86     TXD     BIT     0B0H.1
+  00D5                87     F0      BIT     0D0H.5
+  00D0                88     PSW     DATA    0D0H
+                      89     ?PR?OS_Main?OS       SEGMENT CODE 
+                      90     ?PR?DPTR_JMP?OS      SEGMENT CODE 
+                      91     ?PR?OS_taskDispatch?OS                   SEGMENT CODE 
+                      92     ?PR?_sleep?OS        SEGMENT CODE 
+                      93     ?PR?_addTask?OS      SEGMENT CODE 
+                      94             EXTRN   CODE (addTasks)
+                      95             EXTRN   CODE (?C?CSTPTR)
+                      96             PUBLIC  OS_TEMP_ACC
+                      97             PUBLIC  p_TASK_STACK
+                      98             PUBLIC  p_TASKs_STACK
+                      99             PUBLIC  INTERRUPT_COUNT
+                     100             PUBLIC  p_TASK_RAM_STACK
+                     101             PUBLIC  TASKs_COUNT
+                     102             PUBLIC  RUNNING_TASK_INDEX
+                     103             PUBLIC  p_sg_TASK_RAM
+                     104             PUBLIC  _addTask
+                     105             PUBLIC  _sleep
+                     106             PUBLIC  OS_taskDispatch
+                     107             PUBLIC  DPTR_JMP
+                     108             PUBLIC  OS_Main
+                     109     
+----                 110             DSEG  AT  015H
+0015                 111       p_sg_TASK_RAM:   DS   1
+                     112     
+----                 113             DSEG  AT  013H
+0013                 114     RUNNING_TASK_INDEX:   DS   1
+                     115     
+----                 116             DSEG  AT  012H
+0012                 117         TASKs_COUNT:   DS   1
+                     118     
+----                 119             DSEG  AT  014H
+0014                 120     p_TASK_RAM_STACK:   DS   1
+                     121     
+----                 122             DSEG  AT  010H
+0010                 123     INTERRUPT_COUNT:   DS   1
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     3
+
+                     124     
+----                 125             DSEG  AT  011H
+0011                 126       p_TASKs_STACK:   DS   1
+                     127     
+----                 128             DSEG  AT  016H
+0016                 129        p_TASK_STACK:   DS   1
+                     130     
+----                 131             DSEG  AT  017H
+0017                 132         OS_TEMP_ACC:   DS   1
+                     133     ; #include "os.h"
+                     134     ; 
+                     135     ; uchar INTERRUPT_COUNT _at_ 0x10;                              //中断次数
+                     136     ; uchar data *p_TASKs_STACK _at_ 0x11;          //任务地址栈指针
+                     137     ; uchar TASKs_COUNT _at_ 0x12;                                          //任务数
+                     138     ; uchar RUNNING_TASK_INDEX _at_ 0x13;           //当前任务下标
+                     139     ; uchar data *p_TASK_RAM_STACK _at_ 0x14; //任务数据栈指针       
+                     140     ; 
+                     141     ; #define C_MAIN_SP_START 0x70                          //默认栈数据起始地址
+                     142     ; #define C_TASKs_STACK_START 0x20              //任务数地址栈起始地址
+                     143     ; #define C_TASKs_RAM_START 0x30                        //任务数据起始地址      
+                     144     ; #define C_TASKs_RAM_CAPACITY 0x10 //单个任务最大数据量
+                     145     ; #define C_sgTASK_SP_SRART 0x50                        //任务栈数据起始地址
+                     146     ; #define C_sgTASK_SP_CAPACITY 0x10             //单个任务栈最大数据量
+                     147     ; 
+                     148     ; uchar data * p_sg_TASK_RAM _at_ 0x15;//任务数据栈指针
+                     149     ; uchar data * p_TASK_STACK _at_ 0x16; //任务地址栈指针
+                     150     ; uchar data OS_TEMP_ACC _at_ 0x17; //ACC临时变量
+                     151     ; 
+                     152     ; extern void addTasks();
+                     153     ; extern void pushTaskData();
+                     154     ; 
+                     155     ; void OS_Main(){
+                     156     
+----                 157             RSEG  ?PR?OS_Main?OS
+0000                 158     OS_Main:
+                     159             USING   0
+                     160                             ; SOURCE LINE # 23
+                     161     ;       addTasks();
+                     162                             ; SOURCE LINE # 24
+0000 020000   F      163             LJMP    addTasks
+                     164     ; END OF OS_Main
+                     165     
+                     166     ; }
+                     167     ; 
+                     168     ; void DPTR_JMP(){
+                     169     
+----                 170             RSEG  ?PR?DPTR_JMP?OS
+0000                 171     DPTR_JMP:
+                     172             USING   0
+                     173                             ; SOURCE LINE # 27
+                     174     ;       #pragma asm             
+                     175     ;       MOV A,DPL
+0000 E582            176               MOV A,DPL
+                     177     ;       PUSH ACC
+0002 C0E0            178               PUSH ACC
+                     179     ;       MOV A,DPH
+0004 E583            180               MOV A,DPH
+                     181     ;       PUSH ACC
+0006 C0E0            182               PUSH ACC
+                     183     ;       MOV A,17H       
+0008 E517            184               MOV A,17H     
+                     185     ;       SETB RS0;切换寄存器组到第1区   
+000A D2D3            186               SETB RS0;切换寄存器组到第1区 
+                     187     ;       RET
+000C 22              188               RET
+                     189     ;       #pragma endasm
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     4
+
+                     190     ; }
+                     191                             ; SOURCE LINE # 37
+000D 22              192             RET     
+                     193     ; END OF DPTR_JMP
+                     194     
+                     195     ; 
+                     196     ; void OS_taskDispatch(){       
+                     197     
+----                 198             RSEG  ?PR?OS_taskDispatch?OS
+0000                 199     OS_taskDispatch:
+                     200             USING   0
+                     201                             ; SOURCE LINE # 39
+                     202     ;       //寄存器入栈保护
+                     203     ;       uchar i;
+                     204     ;       for(i=0x08;i<0x10;i++){         
+                     205                             ; SOURCE LINE # 42
+                     206     ;---- Variable 'i?240' assigned to Register 'R7' ----
+0000 7F08            207             MOV     R7,#08H
+0002                 208     ?C0003:
+                     209     ;               //MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
+                     210     ;               *(uchar data*)(C_TASKs_RAM_START + RUNNING_TASK_INDEX*C_TASKs_RAM_CAPACITY 
+                             + p_TASK_RAM_STACK++) = *((uchar data*)i);
+                     211                             ; SOURCE LINE # 44
+0002 A807            212             MOV     R0,AR7
+0004 E6              213             MOV     A,@R0
+0005 FE              214             MOV     R6,A
+0006 E513            215             MOV     A,RUNNING_TASK_INDEX
+0008 C4              216             SWAP    A
+0009 54F0            217             ANL     A,#0F0H
+000B 2430            218             ADD     A,#030H
+000D AC14            219             MOV     R4,p_TASK_RAM_STACK
+000F 0514            220             INC     p_TASK_RAM_STACK
+0011 A804            221             MOV     R0,AR4
+0013 28              222             ADD     A,R0
+0014 F8              223             MOV     R0,A
+0015 A606            224             MOV     @R0,AR6
+                     225     ;       }
+                     226                             ; SOURCE LINE # 45
+0017 0F              227             INC     R7
+0018 BF10E7          228             CJNE    R7,#010H,?C0003
+001B                 229     ?C0004:
+                     230     ;       
+                     231     ;       //IF(当前任务下标==任务总数)
+                     232     ;       ++RUNNING_TASK_INDEX;
+                     233                             ; SOURCE LINE # 48
+001B 0513            234             INC     RUNNING_TASK_INDEX
+                     235     ;       if(RUNNING_TASK_INDEX == TASKs_COUNT){
+                     236                             ; SOURCE LINE # 49
+001D E513            237             MOV     A,RUNNING_TASK_INDEX
+001F B51203          238             CJNE    A,TASKs_COUNT,?C0006
+                     239     ;               RUNNING_TASK_INDEX = 0x00;
+                     240                             ; SOURCE LINE # 50
+0022 E4              241             CLR     A
+0023 F513            242             MOV     RUNNING_TASK_INDEX,A
+                     243     ;       }
+                     244                             ; SOURCE LINE # 51
+0025                 245     ?C0006:
+                     246     ;       p_sg_TASK_RAM = C_TASKs_RAM_START + RUNNING_TASK_INDEX * C_TASKs_RAM_CAPACITY;//任
+                             务数据栈指针   
+                     247                             ; SOURCE LINE # 52
+0025 E513            248             MOV     A,RUNNING_TASK_INDEX
+0027 C4              249             SWAP    A
+0028 54F0            250             ANL     A,#0F0H
+002A 2430            251             ADD     A,#030H
+002C F515            252             MOV     p_sg_TASK_RAM,A
+                     253     ;       //恢复ACC     
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     5
+
+                     254     ;       OS_TEMP_ACC = *(p_sg_TASK_RAM++);
+                     255                             ; SOURCE LINE # 54
+002E FE              256             MOV     R6,A
+002F 0515            257             INC     p_sg_TASK_RAM
+0031 A806            258             MOV     R0,AR6
+0033 E6              259             MOV     A,@R0
+0034 F517            260             MOV     OS_TEMP_ACC,A
+                     261     ;       //恢复PSW
+                     262     ;       *((uchar*)PSW) = *(p_sg_TASK_RAM++) & 0xE7;
+                     263                             ; SOURCE LINE # 56
+0036 AE15            264             MOV     R6,p_sg_TASK_RAM
+0038 0515            265             INC     p_sg_TASK_RAM
+003A A806            266             MOV     R0,AR6
+003C E6              267             MOV     A,@R0
+003D 54E7            268             ANL     A,#0E7H
+003F A9D0            269             MOV     R1,PSW
+0041 7A00            270             MOV     R2,#00H
+0043 7B00            271             MOV     R3,#00H
+0045 120000   F      272             LCALL   ?C?CSTPTR
+                     273     ;       //获取入口地址
+                     274     ;       //先从任务数据栈中获取                
+                     275     ;       DPL = *(p_sg_TASK_RAM++);
+                     276                             ; SOURCE LINE # 59
+0048 AE15            277             MOV     R6,p_sg_TASK_RAM
+004A 0515            278             INC     p_sg_TASK_RAM
+004C A806            279             MOV     R0,AR6
+004E E6              280             MOV     A,@R0
+004F F582            281             MOV     DPL,A
+                     282     ;       DPH = *(p_sg_TASK_RAM++);
+                     283                             ; SOURCE LINE # 60
+0051 AE15            284             MOV     R6,p_sg_TASK_RAM
+0053 0515            285             INC     p_sg_TASK_RAM
+0055 A806            286             MOV     R0,AR6
+0057 E6              287             MOV     A,@R0
+0058 F583            288             MOV     DPH,A
+                     289     ;       if(DPL == 0x00 && DPH == 0x00){
+                     290                             ; SOURCE LINE # 61
+005A E582            291             MOV     A,DPL
+005C 7019            292             JNZ     ?C0007
+005E E583            293             MOV     A,DPH
+0060 7015            294             JNZ     ?C0007
+                     295     ;               //如果任务数据栈为空，则从任务地址栈获取
+                     296     ;               p_TASK_STACK = C_TASKs_STACK_START + RUNNING_TASK_INDEX * 0x02;//任务地�
+                             ��栈指针
+                     297                             ; SOURCE LINE # 63
+0062 E513            298             MOV     A,RUNNING_TASK_INDEX
+0064 25E0            299             ADD     A,ACC
+0066 2420            300             ADD     A,#020H
+0068 F516            301             MOV     p_TASK_STACK,A
+                     302     ;               DPL = *(p_TASK_STACK++);
+                     303                             ; SOURCE LINE # 64
+006A FE              304             MOV     R6,A
+006B 0516            305             INC     p_TASK_STACK
+006D A806            306             MOV     R0,AR6
+006F E6              307             MOV     A,@R0
+0070 F582            308             MOV     DPL,A
+                     309     ;               DPH = *p_TASK_STACK;
+                     310                             ; SOURCE LINE # 65
+0072 A816            311             MOV     R0,p_TASK_STACK
+0074 E6              312             MOV     A,@R0
+0075 F583            313             MOV     DPH,A
+                     314     ;       }       
+                     315                             ; SOURCE LINE # 66
+0077                 316     ?C0007:
+                     317     ;       //切换任务栈的起始地址
+                     318     ;       //先从任务数据栈中获取
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     6
+
+                     319     ;       SP = *(p_sg_TASK_RAM++);
+                     320                             ; SOURCE LINE # 69
+0077 AE15            321             MOV     R6,p_sg_TASK_RAM
+0079 0515            322             INC     p_sg_TASK_RAM
+007B A806            323             MOV     R0,AR6
+007D E6              324             MOV     A,@R0
+007E F581            325             MOV     SP,A
+                     326     ;       if(SP == 0){
+                     327                             ; SOURCE LINE # 70
+0080 E581            328             MOV     A,SP
+0082 7009            329             JNZ     ?C0008
+                     330     ;               //如果任务数据栈为空，则设置为初始任务栈地址
+                     331     ;               SP = C_sgTASK_SP_SRART + RUNNING_TASK_INDEX * C_sgTASK_SP_CAPACITY;
+                     332                             ; SOURCE LINE # 72
+0084 E513            333             MOV     A,RUNNING_TASK_INDEX
+0086 C4              334             SWAP    A
+0087 54F0            335             ANL     A,#0F0H
+0089 2450            336             ADD     A,#050H
+008B F581            337             MOV     SP,A
+                     338     ;       }
+                     339                             ; SOURCE LINE # 73
+008D                 340     ?C0008:
+                     341     ;       //恢复寄存器数据
+                     342     ;       for(i=0x08;i<0x10;i++){                 
+                     343                             ; SOURCE LINE # 75
+008D 7F08            344             MOV     R7,#08H
+008F                 345     ?C0009:
+                     346     ;               *((uchar data*)i) = *(p_sg_TASK_RAM++);
+                     347                             ; SOURCE LINE # 76
+008F AE15            348             MOV     R6,p_sg_TASK_RAM
+0091 0515            349             INC     p_sg_TASK_RAM
+0093 A806            350             MOV     R0,AR6
+0095 E6              351             MOV     A,@R0
+0096 A807            352             MOV     R0,AR7
+0098 F6              353             MOV     @R0,A
+                     354     ;       }
+                     355                             ; SOURCE LINE # 77
+0099 0F              356             INC     R7
+009A BF10F2          357             CJNE    R7,#010H,?C0009
+009D                 358     ?C0010:
+                     359     ;       //跳转
+                     360     ;       DPTR_JMP();     
+                     361                             ; SOURCE LINE # 79
+009D 020000   F      362             LJMP    DPTR_JMP
+                     363     ; END OF OS_taskDispatch
+                     364     
+                     365     ; }
+                     366     ; 
+                     367     ; void sleep(uchar ms)   
+                     368     
+----                 369             RSEG  ?PR?_sleep?OS
+0000                 370     _sleep:
+                     371             USING   0
+                     372                             ; SOURCE LINE # 82
+                     373     ;---- Variable 'ms?341' assigned to Register 'R7' ----
+                     374     ; {
+                     375                             ; SOURCE LINE # 83
+                     376     ;       unsigned char a,b,c;
+                     377     ;     for(c=ms;c>0;c--)
+                     378                             ; SOURCE LINE # 85
+                     379     ;---- Variable 'c?344' assigned to Register 'R7' ----
+0000                 380     ?C0013:
+0000 EF              381             MOV     A,R7
+0001 D3              382             SETB    C
+0002 9400            383             SUBB    A,#00H
+0004 400B            384             JC      ?C0022
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     7
+
+                     385     ;         for(b=142;b>0;b--)
+                     386                             ; SOURCE LINE # 86
+                     387     ;---- Variable 'b?343' assigned to Register 'R6' ----
+0006 7E8E            388             MOV     R6,#08EH
+0008                 389     ?C0016:
+                     390     ;             for(a=2;a>0;a--);
+                     391                             ; SOURCE LINE # 87
+                     392     ;---- Variable 'a?342' assigned to Register 'R5' ----
+0008 7D02            393             MOV     R5,#02H
+000A                 394     ?C0019:
+000A DDFE            395             DJNZ    R5,?C0019
+000C                 396     ?C0018:
+000C DEFA            397             DJNZ    R6,?C0016
+000E                 398     ?C0015:
+000E 1F              399             DEC     R7
+000F 80EF            400             SJMP    ?C0013
+                     401     ; }
+                     402                             ; SOURCE LINE # 88
+0011                 403     ?C0022:
+0011 22              404             RET     
+                     405     ; END OF _sleep
+                     406     
+                     407     ; 
+                     408     ; void addTask(uint task){
+                     409     
+----                 410             RSEG  ?PR?_addTask?OS
+0000                 411     _addTask:
+                     412             USING   0
+                     413                             ; SOURCE LINE # 90
+                     414     ;---- Variable 'task?445' assigned to Register 'R6/R7' ----
+                     415     ;       
+                     416     ;       *p_TASKs_STACK = task;
+                     417                             ; SOURCE LINE # 92
+0000 AD07            418             MOV     R5,AR7
+0002 A811            419             MOV     R0,p_TASKs_STACK
+0004 A605            420             MOV     @R0,AR5
+                     421     ;       ++p_TASKs_STACK;
+                     422                             ; SOURCE LINE # 93
+0006 0511            423             INC     p_TASKs_STACK
+                     424     ;       *p_TASKs_STACK = task >> 8;
+                     425                             ; SOURCE LINE # 94
+0008 AF06            426             MOV     R7,AR6
+000A A811            427             MOV     R0,p_TASKs_STACK
+000C A607            428             MOV     @R0,AR7
+                     429     ;       ++p_TASKs_STACK;
+                     430                             ; SOURCE LINE # 95
+000E 0511            431             INC     p_TASKs_STACK
+                     432     ;       ++TASKs_COUNT;  
+                     433                             ; SOURCE LINE # 96
+0010 0512            434             INC     TASKs_COUNT
+                     435     ; }                     ; SOURCE LINE # 97
+0012 22              436             RET     
+                     437     ; END OF _addTask
+                     438     
+                     439             END
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     8
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E                 T Y P E  V A L U E   ATTRIBUTES
+
+?C0003 . . . . . . . .  C ADDR   0002H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0004 . . . . . . . .  C ADDR   001BH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0006 . . . . . . . .  C ADDR   0025H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0007 . . . . . . . .  C ADDR   0077H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0008 . . . . . . . .  C ADDR   008DH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0009 . . . . . . . .  C ADDR   008FH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0010 . . . . . . . .  C ADDR   009DH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0013 . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_SLEEP?OS
+?C0015 . . . . . . . .  C ADDR   000EH   R   SEG=?PR?_SLEEP?OS
+?C0016 . . . . . . . .  C ADDR   0008H   R   SEG=?PR?_SLEEP?OS
+?C0018 . . . . . . . .  C ADDR   000CH   R   SEG=?PR?_SLEEP?OS
+?C0019 . . . . . . . .  C ADDR   000AH   R   SEG=?PR?_SLEEP?OS
+?C0022 . . . . . . . .  C ADDR   0011H   R   SEG=?PR?_SLEEP?OS
+?C?CSTPTR. . . . . . .  C ADDR   -----       EXT
+?PR?DPTR_JMP?OS. . . .  C SEG    000EH       REL=UNIT
+?PR?OS_MAIN?OS . . . .  C SEG    0003H       REL=UNIT
+?PR?OS_TASKDISPATCH?OS  C SEG    00A0H       REL=UNIT
+?PR?_ADDTASK?OS. . . .  C SEG    0013H       REL=UNIT
+?PR?_SLEEP?OS. . . . .  C SEG    0012H       REL=UNIT
+AC . . . . . . . . . .  B ADDR   00D0H.6 A   
+ACC. . . . . . . . . .  D ADDR   00E0H   A   
+ADDTASKS . . . . . . .  C ADDR   -----       EXT
+AR4. . . . . . . . . .  D ADDR   0004H   A   
+AR5. . . . . . . . . .  D ADDR   0005H   A   
+AR6. . . . . . . . . .  D ADDR   0006H   A   
+AR7. . . . . . . . . .  D ADDR   0007H   A   
+B. . . . . . . . . . .  D ADDR   00F0H   A   
+CP_RL2 . . . . . . . .  B ADDR   00C8H.0 A   
+CY . . . . . . . . . .  B ADDR   00D0H.7 A   
+C_T2 . . . . . . . . .  B ADDR   00C8H.1 A   
+DPH. . . . . . . . . .  D ADDR   0083H   A   
+DPL. . . . . . . . . .  D ADDR   0082H   A   
+DPTR_JMP . . . . . . .  C ADDR   0000H   R   SEG=?PR?DPTR_JMP?OS
+EA . . . . . . . . . .  B ADDR   00A8H.7 A   
+ES . . . . . . . . . .  B ADDR   00A8H.4 A   
+ET0. . . . . . . . . .  B ADDR   00A8H.1 A   
+ET1. . . . . . . . . .  B ADDR   00A8H.3 A   
+ET2. . . . . . . . . .  B ADDR   00A8H.5 A   
+EX0. . . . . . . . . .  B ADDR   00A8H.0 A   
+EX1. . . . . . . . . .  B ADDR   00A8H.2 A   
+EXEN2. . . . . . . . .  B ADDR   00C8H.3 A   
+EXF2 . . . . . . . . .  B ADDR   00C8H.6 A   
+F0 . . . . . . . . . .  B ADDR   00D0H.5 A   
+IE . . . . . . . . . .  D ADDR   00A8H   A   
+IE0. . . . . . . . . .  B ADDR   0088H.1 A   
+IE1. . . . . . . . . .  B ADDR   0088H.3 A   
+INT0 . . . . . . . . .  B ADDR   00B0H.2 A   
+INT1 . . . . . . . . .  B ADDR   00B0H.3 A   
+INTERRUPT_COUNT. . . .  D ADDR   0010H   A   
+IP . . . . . . . . . .  D ADDR   00B8H   A   
+IT0. . . . . . . . . .  B ADDR   0088H.0 A   
+IT1. . . . . . . . . .  B ADDR   0088H.2 A   
+OS . . . . . . . . . .  N NUMB   -----       
+OS_MAIN. . . . . . . .  C ADDR   0000H   R   SEG=?PR?OS_MAIN?OS
+OS_TASKDISPATCH. . . .  C ADDR   0000H   R   SEG=?PR?OS_TASKDISPATCH?OS
+OS_TEMP_ACC. . . . . .  D ADDR   0017H   A   
+OV . . . . . . . . . .  B ADDR   00D0H.2 A   
+P. . . . . . . . . . .  B ADDR   00D0H.0 A   
+P0 . . . . . . . . . .  D ADDR   0080H   A   
+P1 . . . . . . . . . .  D ADDR   0090H   A   
+A51 MACRO ASSEMBLER  OS                                                                   02/18/2020 08:49:47 PAGE     9
+
+P2 . . . . . . . . . .  D ADDR   00A0H   A   
+P3 . . . . . . . . . .  D ADDR   00B0H   A   
+PCON . . . . . . . . .  D ADDR   0087H   A   
+PS . . . . . . . . . .  B ADDR   00B8H.4 A   
+PSW. . . . . . . . . .  D ADDR   00D0H   A   
+PT0. . . . . . . . . .  B ADDR   00B8H.1 A   
+PT1. . . . . . . . . .  B ADDR   00B8H.3 A   
+PT2. . . . . . . . . .  B ADDR   00B8H.5 A   
+PX0. . . . . . . . . .  B ADDR   00B8H.0 A   
+PX1. . . . . . . . . .  B ADDR   00B8H.2 A   
+P_SG_TASK_RAM. . . . .  D ADDR   0015H   A   
+P_TASKS_STACK. . . . .  D ADDR   0011H   A   
+P_TASK_RAM_STACK . . .  D ADDR   0014H   A   
+P_TASK_STACK . . . . .  D ADDR   0016H   A   
+RB8. . . . . . . . . .  B ADDR   0098H.2 A   
+RCAP2H . . . . . . . .  D ADDR   00CBH   A   
+RCAP2L . . . . . . . .  D ADDR   00CAH   A   
+RCLK . . . . . . . . .  B ADDR   00C8H.5 A   
+RD . . . . . . . . . .  B ADDR   00B0H.7 A   
+REN. . . . . . . . . .  B ADDR   0098H.4 A   
+RI . . . . . . . . . .  B ADDR   0098H.0 A   
+RS0. . . . . . . . . .  B ADDR   00D0H.3 A   
+RS1. . . . . . . . . .  B ADDR   00D0H.4 A   
+RUNNING_TASK_INDEX . .  D ADDR   0013H   A   
+RXD. . . . . . . . . .  B ADDR   00B0H.0 A   
+SBUF . . . . . . . . .  D ADDR   0099H   A   
+SCON . . . . . . . . .  D ADDR   0098H   A   
+SM0. . . . . . . . . .  B ADDR   0098H.7 A   
+SM1. . . . . . . . . .  B ADDR   0098H.6 A   
+SM2. . . . . . . . . .  B ADDR   0098H.5 A   
+SP . . . . . . . . . .  D ADDR   0081H   A   
+T0 . . . . . . . . . .  B ADDR   00B0H.4 A   
+T1 . . . . . . . . . .  B ADDR   00B0H.5 A   
+T2 . . . . . . . . . .  B ADDR   0090H.0 A   
+T2CON. . . . . . . . .  D ADDR   00C8H   A   
+T2EX . . . . . . . . .  B ADDR   0090H.1 A   
+TASKS_COUNT. . . . . .  D ADDR   0012H   A   
+TB8. . . . . . . . . .  B ADDR   0098H.3 A   
+TCLK . . . . . . . . .  B ADDR   00C8H.4 A   
+TCON . . . . . . . . .  D ADDR   0088H   A   
+TF0. . . . . . . . . .  B ADDR   0088H.5 A   
+TF1. . . . . . . . . .  B ADDR   0088H.7 A   
+TF2. . . . . . . . . .  B ADDR   00C8H.7 A   
+TH0. . . . . . . . . .  D ADDR   008CH   A   
+TH1. . . . . . . . . .  D ADDR   008DH   A   
+TH2. . . . . . . . . .  D ADDR   00CDH   A   
+TI . . . . . . . . . .  B ADDR   0098H.1 A   
+TL0. . . . . . . . . .  D ADDR   008AH   A   
+TL1. . . . . . . . . .  D ADDR   008BH   A   
+TL2. . . . . . . . . .  D ADDR   00CCH   A   
+TMOD . . . . . . . . .  D ADDR   0089H   A   
+TR0. . . . . . . . . .  B ADDR   0088H.4 A   
+TR1. . . . . . . . . .  B ADDR   0088H.6 A   
+TR2. . . . . . . . . .  B ADDR   00C8H.2 A   
+TXD. . . . . . . . . .  B ADDR   00B0H.1 A   
+WR . . . . . . . . . .  B ADDR   00B0H.6 A   
+_ADDTASK . . . . . . .  C ADDR   0000H   R   SEG=?PR?_ADDTASK?OS
+_SLEEP . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_SLEEP?OS
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

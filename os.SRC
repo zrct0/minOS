@@ -1,0 +1,439 @@
+; .\os.SRC generated from: os.c
+; COMPILER INVOKED BY:
+;        D:\c51\c51v952\C51\BIN\C51.EXE os.c BROWSE DEBUG OBJECTEXTEND TABS(2) SRC(.\os.SRC)
+
+$NOMOD51
+
+NAME	OS
+
+P0	DATA	080H
+P1	DATA	090H
+P2	DATA	0A0H
+P3	DATA	0B0H
+T0	BIT	0B0H.4
+AC	BIT	0D0H.6
+T1	BIT	0B0H.5
+T2	BIT	090H.0
+EA	BIT	0A8H.7
+IE	DATA	0A8H
+EXF2	BIT	0C8H.6
+RD	BIT	0B0H.7
+ES	BIT	0A8H.4
+IP	DATA	0B8H
+RI	BIT	098H.0
+INT0	BIT	0B0H.2
+CY	BIT	0D0H.7
+TI	BIT	098H.1
+INT1	BIT	0B0H.3
+RCAP2H	DATA	0CBH
+PS	BIT	0B8H.4
+SP	DATA	081H
+T2EX	BIT	090H.1
+OV	BIT	0D0H.2
+RCAP2L	DATA	0CAH
+C_T2	BIT	0C8H.1
+WR	BIT	0B0H.6
+RCLK	BIT	0C8H.5
+TCLK	BIT	0C8H.4
+SBUF	DATA	099H
+PCON	DATA	087H
+SCON	DATA	098H
+TMOD	DATA	089H
+TCON	DATA	088H
+IE0	BIT	088H.1
+IE1	BIT	088H.3
+B	DATA	0F0H
+CP_RL2	BIT	0C8H.0
+ACC	DATA	0E0H
+ET0	BIT	0A8H.1
+ET1	BIT	0A8H.3
+TF0	BIT	088H.5
+ET2	BIT	0A8H.5
+TF1	BIT	088H.7
+TF2	BIT	0C8H.7
+RB8	BIT	098H.2
+TH0	DATA	08CH
+EX0	BIT	0A8H.0
+IT0	BIT	088H.0
+TH1	DATA	08DH
+TB8	BIT	098H.3
+EX1	BIT	0A8H.2
+IT1	BIT	088H.2
+TH2	DATA	0CDH
+P	BIT	0D0H.0
+SM0	BIT	098H.7
+TL0	DATA	08AH
+SM1	BIT	098H.6
+TL1	DATA	08BH
+SM2	BIT	098H.5
+TL2	DATA	0CCH
+PT0	BIT	0B8H.1
+PT1	BIT	0B8H.3
+RS0	BIT	0D0H.3
+PT2	BIT	0B8H.5
+TR0	BIT	088H.4
+RS1	BIT	0D0H.4
+TR1	BIT	088H.6
+TR2	BIT	0C8H.2
+PX0	BIT	0B8H.0
+PX1	BIT	0B8H.2
+DPH	DATA	083H
+DPL	DATA	082H
+EXEN2	BIT	0C8H.3
+REN	BIT	098H.4
+T2CON	DATA	0C8H
+RXD	BIT	0B0H.0
+TXD	BIT	0B0H.1
+F0	BIT	0D0H.5
+PSW	DATA	0D0H
+?PR?OS_Main?OS       SEGMENT CODE 
+?PR?DPTR_JMP?OS      SEGMENT CODE 
+?PR?OS_taskDispatch?OS                   SEGMENT CODE 
+?PR?_sleep?OS        SEGMENT CODE 
+?PR?_addTask?OS      SEGMENT CODE 
+	EXTRN	CODE (addTasks)
+	EXTRN	CODE (?C?CSTPTR)
+	PUBLIC	OS_TEMP_ACC
+	PUBLIC	p_TASK_STACK
+	PUBLIC	p_TASKs_STACK
+	PUBLIC	INTERRUPT_COUNT
+	PUBLIC	p_TASK_RAM_STACK
+	PUBLIC	TASKs_COUNT
+	PUBLIC	RUNNING_TASK_INDEX
+	PUBLIC	p_sg_TASK_RAM
+	PUBLIC	_addTask
+	PUBLIC	_sleep
+	PUBLIC	OS_taskDispatch
+	PUBLIC	DPTR_JMP
+	PUBLIC	OS_Main
+
+	DSEG  AT  015H
+  p_sg_TASK_RAM:   DS   1
+
+	DSEG  AT  013H
+RUNNING_TASK_INDEX:   DS   1
+
+	DSEG  AT  012H
+    TASKs_COUNT:   DS   1
+
+	DSEG  AT  014H
+p_TASK_RAM_STACK:   DS   1
+
+	DSEG  AT  010H
+INTERRUPT_COUNT:   DS   1
+
+	DSEG  AT  011H
+  p_TASKs_STACK:   DS   1
+
+	DSEG  AT  016H
+   p_TASK_STACK:   DS   1
+
+	DSEG  AT  017H
+    OS_TEMP_ACC:   DS   1
+; #include "os.h"
+; 
+; uchar INTERRUPT_COUNT _at_ 0x10;				//中断次数
+; uchar data *p_TASKs_STACK _at_ 0x11;		//任务地址栈指针
+; uchar TASKs_COUNT _at_ 0x12;						//任务数
+; uchar RUNNING_TASK_INDEX _at_ 0x13; 		//当前任务下标
+; uchar data *p_TASK_RAM_STACK _at_ 0x14; //任务数据栈指针	
+; 
+; #define C_MAIN_SP_START 0x70				//默认栈数据起始地址
+; #define C_TASKs_STACK_START 0x20		//任务数地址栈起始地址
+; #define C_TASKs_RAM_START 0x30			//任务数据起始地址	
+; #define C_TASKs_RAM_CAPACITY 0x10 //单个任务最大数据量
+; #define C_sgTASK_SP_SRART 0x50			//任务栈数据起始地址
+; #define C_sgTASK_SP_CAPACITY 0x10		//单个任务栈最大数据量
+; 
+; uchar data * p_sg_TASK_RAM _at_ 0x15;//任务数据栈指针
+; uchar data * p_TASK_STACK _at_ 0x16; //任务地址栈指针
+; uchar data OS_TEMP_ACC _at_ 0x17; //ACC临时变量
+; 
+; extern void addTasks();
+; extern void pushTaskData();
+; 
+; void OS_Main(){
+
+	RSEG  ?PR?OS_Main?OS
+OS_Main:
+	USING	0
+			; SOURCE LINE # 23
+; 	addTasks();
+			; SOURCE LINE # 24
+	LJMP 	addTasks
+; END OF OS_Main
+
+; }
+; 
+; void DPTR_JMP(){
+
+	RSEG  ?PR?DPTR_JMP?OS
+DPTR_JMP:
+	USING	0
+			; SOURCE LINE # 27
+; 	#pragma asm		
+; 	MOV A,DPL
+	  MOV A,DPL
+; 	PUSH ACC
+	  PUSH ACC
+; 	MOV A,DPH
+	  MOV A,DPH
+; 	PUSH ACC
+	  PUSH ACC
+; 	MOV A,17H	
+	  MOV A,17H	
+; 	SETB RS0;切换寄存器组到第1区	
+	  SETB RS0;切换寄存器组到第1区	
+; 	RET
+	  RET
+; 	#pragma endasm
+; }
+			; SOURCE LINE # 37
+	RET  	
+; END OF DPTR_JMP
+
+; 
+; void OS_taskDispatch(){	
+
+	RSEG  ?PR?OS_taskDispatch?OS
+OS_taskDispatch:
+	USING	0
+			; SOURCE LINE # 39
+; 	//寄存器入栈保护
+; 	uchar i;
+; 	for(i=0x08;i<0x10;i++){		
+			; SOURCE LINE # 42
+;---- Variable 'i?240' assigned to Register 'R7' ----
+	MOV  	R7,#08H
+?C0003:
+; 		//MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
+; 		*(uchar data*)(C_TASKs_RAM_START + RUNNING_TASK_INDEX*C_TASKs_RAM_CAPACITY + p_TASK_RAM_STACK++) = *((uchar data*)i);
+			; SOURCE LINE # 44
+	MOV  	R0,AR7
+	MOV  	A,@R0
+	MOV  	R6,A
+	MOV  	A,RUNNING_TASK_INDEX
+	SWAP 	A
+	ANL  	A,#0F0H
+	ADD  	A,#030H
+	MOV  	R4,p_TASK_RAM_STACK
+	INC  	p_TASK_RAM_STACK
+	MOV  	R0,AR4
+	ADD  	A,R0
+	MOV  	R0,A
+	MOV  	@R0,AR6
+; 	}
+			; SOURCE LINE # 45
+	INC  	R7
+	CJNE 	R7,#010H,?C0003
+?C0004:
+; 	
+; 	//IF(当前任务下标==任务总数)
+; 	++RUNNING_TASK_INDEX;
+			; SOURCE LINE # 48
+	INC  	RUNNING_TASK_INDEX
+; 	if(RUNNING_TASK_INDEX == TASKs_COUNT){
+			; SOURCE LINE # 49
+	MOV  	A,RUNNING_TASK_INDEX
+	CJNE 	A,TASKs_COUNT,?C0006
+; 		RUNNING_TASK_INDEX = 0x00;
+			; SOURCE LINE # 50
+	CLR  	A
+	MOV  	RUNNING_TASK_INDEX,A
+; 	}
+			; SOURCE LINE # 51
+?C0006:
+; 	p_sg_TASK_RAM = C_TASKs_RAM_START + RUNNING_TASK_INDEX * C_TASKs_RAM_CAPACITY;//任务数据栈指针	
+			; SOURCE LINE # 52
+	MOV  	A,RUNNING_TASK_INDEX
+	SWAP 	A
+	ANL  	A,#0F0H
+	ADD  	A,#030H
+	MOV  	p_sg_TASK_RAM,A
+; 	//恢复ACC	
+; 	OS_TEMP_ACC = *(p_sg_TASK_RAM++);
+			; SOURCE LINE # 54
+	MOV  	R6,A
+	INC  	p_sg_TASK_RAM
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	MOV  	OS_TEMP_ACC,A
+; 	//恢复PSW
+; 	*((uchar*)PSW) = *(p_sg_TASK_RAM++) & 0xE7;
+			; SOURCE LINE # 56
+	MOV  	R6,p_sg_TASK_RAM
+	INC  	p_sg_TASK_RAM
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	ANL  	A,#0E7H
+	MOV  	R1,PSW
+	MOV  	R2,#00H
+	MOV  	R3,#00H
+	LCALL	?C?CSTPTR
+; 	//获取入口地址
+; 	//先从任务数据栈中获取		
+; 	DPL = *(p_sg_TASK_RAM++);
+			; SOURCE LINE # 59
+	MOV  	R6,p_sg_TASK_RAM
+	INC  	p_sg_TASK_RAM
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	MOV  	DPL,A
+; 	DPH = *(p_sg_TASK_RAM++);
+			; SOURCE LINE # 60
+	MOV  	R6,p_sg_TASK_RAM
+	INC  	p_sg_TASK_RAM
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	MOV  	DPH,A
+; 	if(DPL == 0x00 && DPH == 0x00){
+			; SOURCE LINE # 61
+	MOV  	A,DPL
+	JNZ  	?C0007
+	MOV  	A,DPH
+	JNZ  	?C0007
+; 		//如果任务数据栈为空，则从任务地址栈获取
+; 		p_TASK_STACK = C_TASKs_STACK_START + RUNNING_TASK_INDEX * 0x02;//任务地址栈指针
+			; SOURCE LINE # 63
+	MOV  	A,RUNNING_TASK_INDEX
+	ADD  	A,ACC
+	ADD  	A,#020H
+	MOV  	p_TASK_STACK,A
+; 		DPL = *(p_TASK_STACK++);
+			; SOURCE LINE # 64
+	MOV  	R6,A
+	INC  	p_TASK_STACK
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	MOV  	DPL,A
+; 		DPH = *p_TASK_STACK;
+			; SOURCE LINE # 65
+	MOV  	R0,p_TASK_STACK
+	MOV  	A,@R0
+	MOV  	DPH,A
+; 	}	
+			; SOURCE LINE # 66
+?C0007:
+; 	//切换任务栈的起始地址
+; 	//先从任务数据栈中获取
+; 	SP = *(p_sg_TASK_RAM++);
+			; SOURCE LINE # 69
+	MOV  	R6,p_sg_TASK_RAM
+	INC  	p_sg_TASK_RAM
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	MOV  	SP,A
+; 	if(SP == 0){
+			; SOURCE LINE # 70
+	MOV  	A,SP
+	JNZ  	?C0008
+; 		//如果任务数据栈为空，则设置为初始任务栈地址
+; 		SP = C_sgTASK_SP_SRART + RUNNING_TASK_INDEX * C_sgTASK_SP_CAPACITY;
+			; SOURCE LINE # 72
+	MOV  	A,RUNNING_TASK_INDEX
+	SWAP 	A
+	ANL  	A,#0F0H
+	ADD  	A,#050H
+	MOV  	SP,A
+; 	}
+			; SOURCE LINE # 73
+?C0008:
+; 	//恢复寄存器数据
+; 	for(i=0x08;i<0x10;i++){			
+			; SOURCE LINE # 75
+	MOV  	R7,#08H
+?C0009:
+; 		*((uchar data*)i) = *(p_sg_TASK_RAM++);
+			; SOURCE LINE # 76
+	MOV  	R6,p_sg_TASK_RAM
+	INC  	p_sg_TASK_RAM
+	MOV  	R0,AR6
+	MOV  	A,@R0
+	MOV  	R0,AR7
+	MOV  	@R0,A
+; 	}
+			; SOURCE LINE # 77
+	INC  	R7
+	CJNE 	R7,#010H,?C0009
+?C0010:
+; 	//跳转
+; 	DPTR_JMP();	
+			; SOURCE LINE # 79
+	LJMP 	DPTR_JMP
+; END OF OS_taskDispatch
+
+; }
+; 
+; void sleep(uchar ms)   
+
+	RSEG  ?PR?_sleep?OS
+_sleep:
+	USING	0
+			; SOURCE LINE # 82
+;---- Variable 'ms?341' assigned to Register 'R7' ----
+; {
+			; SOURCE LINE # 83
+; 	unsigned char a,b,c;
+;     for(c=ms;c>0;c--)
+			; SOURCE LINE # 85
+;---- Variable 'c?344' assigned to Register 'R7' ----
+?C0013:
+	MOV  	A,R7
+	SETB 	C
+	SUBB 	A,#00H
+	JC   	?C0022
+;         for(b=142;b>0;b--)
+			; SOURCE LINE # 86
+;---- Variable 'b?343' assigned to Register 'R6' ----
+	MOV  	R6,#08EH
+?C0016:
+;             for(a=2;a>0;a--);
+			; SOURCE LINE # 87
+;---- Variable 'a?342' assigned to Register 'R5' ----
+	MOV  	R5,#02H
+?C0019:
+	DJNZ 	R5,?C0019
+?C0018:
+	DJNZ 	R6,?C0016
+?C0015:
+	DEC  	R7
+	SJMP 	?C0013
+; }
+			; SOURCE LINE # 88
+?C0022:
+	RET  	
+; END OF _sleep
+
+; 
+; void addTask(uint task){
+
+	RSEG  ?PR?_addTask?OS
+_addTask:
+	USING	0
+			; SOURCE LINE # 90
+;---- Variable 'task?445' assigned to Register 'R6/R7' ----
+; 	
+; 	*p_TASKs_STACK = task;
+			; SOURCE LINE # 92
+	MOV  	R5,AR7
+	MOV  	R0,p_TASKs_STACK
+	MOV  	@R0,AR5
+; 	++p_TASKs_STACK;
+			; SOURCE LINE # 93
+	INC  	p_TASKs_STACK
+; 	*p_TASKs_STACK = task >> 8;
+			; SOURCE LINE # 94
+	MOV  	R7,AR6
+	MOV  	R0,p_TASKs_STACK
+	MOV  	@R0,AR7
+; 	++p_TASKs_STACK;
+			; SOURCE LINE # 95
+	INC  	p_TASKs_STACK
+; 	++TASKs_COUNT;	
+			; SOURCE LINE # 96
+	INC  	TASKs_COUNT
+; }			; SOURCE LINE # 97
+	RET  	
+; END OF _addTask
+
+	END

@@ -2,6 +2,5 @@
 *.OBJ
 *.inp
 *.M51
-*.plg
 *.SDF
 STARTUP.A51
