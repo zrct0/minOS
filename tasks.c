@@ -19,7 +19,7 @@ void task2(){
 		if(i==0){
 			i=1;
 		}
-		P2 = i;
+		P1 = i;
 		sleep(100);		
 	}
 }

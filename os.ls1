@@ -1,4 +1,4 @@
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     1
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     1
 
 
 MACRO ASSEMBLER A51 V8.02b
@@ -65,7 +65,7 @@ LOC  OBJ            LINE     SOURCE
   008C                55     TH0     DATA    08CH
   00A8                56     EX0     BIT     0A8H.0
   0088                57     IT0     BIT     088H.0
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     2
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     2
 
   008D                58     TH1     DATA    08DH
   009B                59     TB8     BIT     098H.3
@@ -133,7 +133,7 @@ LOC  OBJ            LINE     SOURCE
 0032                 121         pTAK_RM_STK:   DS   2
                      122     
 ----                 123             DSEG  AT  043H
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     3
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     3
 
 0043                 124                   i:   DS   1
                      125     
@@ -201,7 +201,7 @@ LOC  OBJ            LINE     SOURCE
                      187                             ; SOURCE LINE # 39
 0000 754308          188             MOV     i,#08H
 0003                 189     ?C0002:
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     4
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     4
 
                      190     ;               //MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
                      191     ;               *((uchar xdata *)(C_TASKs_RAM_START + RN_TASK_IDX*C_TASKs_RAM_CAPACITY + pT
@@ -269,7 +269,7 @@ LOC  OBJ            LINE     SOURCE
                      250                             ; SOURCE LINE # 52
 004B 854330          251             MOV     RN_TASK_IDX,i
                      252     ;                       *(p_JCB++) = JCB_RUN;                   
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     5
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     5
 
                      253                             ; SOURCE LINE # 53
 004E AF34            254             MOV     R7,p_JCB
@@ -337,7 +337,7 @@ LOC  OBJ            LINE     SOURCE
                      315     ;       Cache_TaskEnter_L = *(pTAK_RM_STK++);
                      316                             ; SOURCE LINE # 65
 009A 0533            317             INC     pTAK_RM_STK+01H
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     6
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     6
 
 009C E533            318             MOV     A,pTAK_RM_STK+01H
 009E AE32            319             MOV     R6,pTAK_RM_STK
@@ -405,7 +405,7 @@ LOC  OBJ            LINE     SOURCE
                      381                             ; SOURCE LINE # 75
 00EA E581            382             MOV     A,SP
 00EC 700A            383             JNZ     ?C0010
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     7
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     7
 
                      384     ;               //如果任务数据栈为空，则设置为初始任务栈地址
                      385     ;               SP = C_sgTASK_SP_SRART + RN_TASK_IDX * C_sgTASK_SP_CAPACITY;
@@ -473,7 +473,7 @@ LOC  OBJ            LINE     SOURCE
                      447     ; void OS_TaskRecover(){                
                      448     
 ----                 449             RSEG  ?PR?OS_TaskRecover?OS
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     8
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     8
 
 0000                 450     OS_TaskRecover:
                      451             USING   0
@@ -541,7 +541,7 @@ LOC  OBJ            LINE     SOURCE
                      513     
                      514     ; 
                      515     ; void addTask(uint task){              
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE     9
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     9
 
                      516     
 ----                 517             RSEG  ?PR?_addTask?OS
@@ -601,7 +601,7 @@ LOC  OBJ            LINE     SOURCE
                      570     ; END OF _addTask
                      571     
                      572             END
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE    10
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE    10
 
 SYMBOL TABLE LISTING
 ------ ----- -------
@@ -669,7 +669,7 @@ EX1. . . . . . . . . .  B ADDR   00A8H.2 A
 EXEN2. . . . . . . . .  B ADDR   00C8H.3 A   
 EXF2 . . . . . . . . .  B ADDR   00C8H.6 A   
 F0 . . . . . . . . . .  B ADDR   00D0H.5 A   
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE    11
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE    11
 
 I. . . . . . . . . . .  D ADDR   0043H   A   
 IE . . . . . . . . . .  D ADDR   00A8H   A   
@@ -737,7 +737,7 @@ TL0. . . . . . . . . .  D ADDR   008AH   A
 TL1. . . . . . . . . .  D ADDR   008BH   A   
 TL2. . . . . . . . . .  D ADDR   00CCH   A   
 TMOD . . . . . . . . .  D ADDR   0089H   A   
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:24:21 PAGE    12
+A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE    12
 
 TR0. . . . . . . . . .  B ADDR   0088H.4 A   
 TR1. . . . . . . . . .  B ADDR   0088H.6 A   
