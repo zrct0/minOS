@@ -1,17 +1,14 @@
     EXTRN CODE(OS_Main)	
 	EXTRN CODE(OS_taskDispatch)
-	D_ITRPT_COUNT DATA 10H;中断次数
-	D_p_TASKs_STK DATA 11H;任务地址栈指针
-	D_TASKs_COUNT DATA 12H;任务数
-	D_RN_TASK_IDX DATA 13H;当前任务下标
-	D_pTAK_RM_STK DATA 14H;任务数据栈指针	
-	
-	C_MAIN_SP_SRT EQU 70H;默认栈数据起始地址
-	C_TASKs_STK_S EQU 20H;任务数地址栈起始地址
-	C_TASKs_RAM_S EQU 30H;任务数据起始地址	
-	C_sgTAK_RM_CT EQU 10H;单个任务最大数据量
-	C_sgTAK_SP_SR EQU 50H;任务栈数据起始地址
-	C_sgTAK_SP_CT EQU 10H;单个任务栈最大数据量
+	EXTRN CODE(OS_TaskRecover)
+	D_RN_TASK_IDX DATA 30H;当前任务下标	
+	D_ITRPT_COUNT DATA 31H;中断次数	
+	D_pTAK_RM_STK DATA 33H;任务RAM栈指针			
+		
+	C_TASKs_RAM_S EQU 0000H;任务RAM起始地址		
+	C_MAIN_SP_SRT EQU 70H;默认栈数据起始地址	
+	C_sgTAK_RM_CT EQU 20H;单个任务最大数据量	
+	C_sgTAK_SP_CT EQU 20H;单个任务栈最大数据量
 	
 	
 	ORG 0000H
@@ -20,16 +17,20 @@
     LJMP Timer0Interrupt
 
 START:
-    MOV SP,#C_MAIN_SP_SRT
-	MOV P1,#00H
-	MOV D_ITRPT_COUNT,#00H;中断次数
-	MOV D_p_TASKs_STK,#C_TASKs_STK_S;任务数组栈指针
-	MOV D_TASKs_COUNT,#00H;任务数
+	;SP不为07H,进行任务回收
+	MOV A,SP
+	CJNE A,#07H,STARTRECOVER
+	AJMP STARTNEXT
+STARTRECOVER:
+	LJMP OS_TaskRecover
+STARTNEXT:
+	;正式开始初始化
+    MOV SP,#C_MAIN_SP_SRT	
+	MOV D_ITRPT_COUNT,#00H;中断次数		
 	MOV D_RN_TASK_IDX,#00H;当前任务下标	
 	LCALL OS_Main
 	LCALL InitTimer0
-	LJMP TaskDispatch
-
+	LJMP TaskDispatch	
 
 InitTimer0:
     MOV TMOD,#01H
@@ -56,7 +57,8 @@ PushTaskData:
 	ADD A,D_pTAK_RM_STK		;AND + D_pTAK_RM_STK
 	MOV R1,A
 	POP ACC
-	MOV @R1,A
+	MOV P2,#00H
+	MOVX @R1,A
 	INC D_pTAK_RM_STK	
 	RET
 	
@@ -64,9 +66,8 @@ Timer0Interrupt:
     MOV TH0,#00H
     MOV TL0,#00H
 	;切换寄存器组到第0区
-	CLR RS0	
-    MOV P2,D_ITRPT_COUNT;显示当前任务数于P2口
-	INC D_ITRPT_COUNT;中断次数++
+	CLR RS0	    
+	INC D_ITRPT_COUNT;中断次数++	
 	MOV D_pTAK_RM_STK, #00H;对任务数据栈指针清0
 	;当前ACC入任务栈保护
 	LCALL PushTaskData

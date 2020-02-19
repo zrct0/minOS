@@ -87,97 +87,346 @@ TXD	BIT	0B0H.1
 F0	BIT	0D0H.5
 PSW	DATA	0D0H
 ?PR?OS_Main?OS       SEGMENT CODE 
-?PR?DPTR_JMP?OS      SEGMENT CODE 
 ?PR?OS_taskDispatch?OS                   SEGMENT CODE 
+?PR?OS_TaskRecover?OS                    SEGMENT CODE 
 ?PR?_sleep?OS        SEGMENT CODE 
 ?PR?_addTask?OS      SEGMENT CODE 
 	EXTRN	CODE (addTasks)
+	EXTRN	CODE (?C?OFFXADD)
 	EXTRN	CODE (?C?CSTPTR)
-	PUBLIC	OS_TEMP_ACC
-	PUBLIC	p_TASK_STACK
-	PUBLIC	p_TASKs_STACK
-	PUBLIC	INTERRUPT_COUNT
-	PUBLIC	p_TASK_RAM_STACK
-	PUBLIC	TASKs_COUNT
-	PUBLIC	RUNNING_TASK_INDEX
-	PUBLIC	p_sg_TASK_RAM
+	PUBLIC	RN_TASK_IDX
+	PUBLIC	Cache_TaskEnter_L
+	PUBLIC	Cache_TaskEnter_H
+	PUBLIC	i
+	PUBLIC	pTAK_RM_STK
+	PUBLIC	p_JCB
+	PUBLIC	ITRPT_COUNT
+	PUBLIC	Cache_ACC
 	PUBLIC	_addTask
 	PUBLIC	_sleep
+	PUBLIC	OS_TaskRecover
 	PUBLIC	OS_taskDispatch
-	PUBLIC	DPTR_JMP
 	PUBLIC	OS_Main
 
-	DSEG  AT  015H
-  p_sg_TASK_RAM:   DS   1
+	DSEG  AT  040H
+      Cache_ACC:   DS   1
 
-	DSEG  AT  013H
-RUNNING_TASK_INDEX:   DS   1
+	DSEG  AT  031H
+    ITRPT_COUNT:   DS   1
 
-	DSEG  AT  012H
-    TASKs_COUNT:   DS   1
+	DSEG  AT  034H
+          p_JCB:   DS   1
 
-	DSEG  AT  014H
-p_TASK_RAM_STACK:   DS   1
+	DSEG  AT  032H
+    pTAK_RM_STK:   DS   2
 
-	DSEG  AT  010H
-INTERRUPT_COUNT:   DS   1
+	DSEG  AT  043H
+              i:   DS   1
 
-	DSEG  AT  011H
-  p_TASKs_STACK:   DS   1
+	DSEG  AT  042H
+Cache_TaskEnter_H:   DS   1
 
-	DSEG  AT  016H
-   p_TASK_STACK:   DS   1
+	DSEG  AT  041H
+Cache_TaskEnter_L:   DS   1
 
-	DSEG  AT  017H
-    OS_TEMP_ACC:   DS   1
+	DSEG  AT  030H
+    RN_TASK_IDX:   DS   1
 ; #include "os.h"
 ; 
-; uchar INTERRUPT_COUNT _at_ 0x10;				//中断次数
-; uchar data *p_TASKs_STACK _at_ 0x11;		//任务地址栈指针
-; uchar TASKs_COUNT _at_ 0x12;						//任务数
-; uchar RUNNING_TASK_INDEX _at_ 0x13; 		//当前任务下标
-; uchar data *p_TASK_RAM_STACK _at_ 0x14; //任务数据栈指针	
+; uchar RN_TASK_IDX _at_ 0x30; 		  //当前任务下标
+; uchar ITRPT_COUNT _at_ 0x31;			//中断次数
+; uchar xdata *pTAK_RM_STK _at_ 0x32;//任务RAM栈指针	
+; uchar data *p_JCB _at_ 0x34;		  //JCB地址栈指针
 ; 
-; #define C_MAIN_SP_START 0x70				//默认栈数据起始地址
-; #define C_TASKs_STACK_START 0x20		//任务数地址栈起始地址
-; #define C_TASKs_RAM_START 0x30			//任务数据起始地址	
-; #define C_TASKs_RAM_CAPACITY 0x10 //单个任务最大数据量
-; #define C_sgTASK_SP_SRART 0x50			//任务栈数据起始地址
-; #define C_sgTASK_SP_CAPACITY 0x10		//单个任务栈最大数据量
+; #define C_MAX_TASK_COUNT 0x04		      //最多任务数
+; #define C_JCB_START 0x50		      //JCB起始地址
+; #define C_TASKs_RAM_START 0x0000	//任务RAM起始地址	
+; #define C_sgTASK_SP_SRART 0x80		//任务栈数据起始地址
+; #define C_MAIN_SP_START 0x70			//默认栈数据起始地址
+; #define C_JCB_CAPACITY 0x08	      //JCB容量
+; #define C_TASKs_RAM_CAPACITY 0x20 //单个任务最大容量
+; #define C_sgTASK_SP_CAPACITY 0x20	//单个任务栈最大容量
 ; 
-; uchar data * p_sg_TASK_RAM _at_ 0x15;//任务数据栈指针
-; uchar data * p_TASK_STACK _at_ 0x16; //任务地址栈指针
-; uchar data OS_TEMP_ACC _at_ 0x17; //ACC临时变量
+; #define JCB_DESTORY 0x00
+; #define JCB_BLOCK 0x01
+; #define JCB_RUN 0x02
+; 
+; uchar data Cache_ACC _at_ 0x40;        //ACC临时变量
+; uchar data Cache_TaskEnter_L _at_ 0x41;//任务人口地址L临时变量
+; uchar data Cache_TaskEnter_H _at_ 0x42;//任务人口地址H临时变量
+; uchar data i _at_ 0x43;                //临时变量i
 ; 
 ; extern void addTasks();
 ; extern void pushTaskData();
+; 
+; 
 ; 
 ; void OS_Main(){
 
 	RSEG  ?PR?OS_Main?OS
 OS_Main:
 	USING	0
-			; SOURCE LINE # 23
+			; SOURCE LINE # 31
 ; 	addTasks();
-			; SOURCE LINE # 24
+			; SOURCE LINE # 32
 	LJMP 	addTasks
 ; END OF OS_Main
 
 ; }
 ; 
-; void DPTR_JMP(){
+; 
+; void OS_taskDispatch(){
 
-	RSEG  ?PR?DPTR_JMP?OS
-DPTR_JMP:
+	RSEG  ?PR?OS_taskDispatch?OS
+OS_taskDispatch:
 	USING	0
-			; SOURCE LINE # 27
+			; SOURCE LINE # 36
+; 
+; 	//寄存器入栈保护	
+; 	for(i=0x08;i<0x10;i++){		
+			; SOURCE LINE # 39
+	MOV  	i,#08H
+?C0002:
+; 		//MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
+; 		*((uchar xdata *)(C_TASKs_RAM_START + RN_TASK_IDX*C_TASKs_RAM_CAPACITY + pTAK_RM_STK++)) = *((uchar data*)i);
+			; SOURCE LINE # 41
+	MOV  	R0,i
+	MOV  	A,@R0
+	MOV  	R7,A
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R4,pTAK_RM_STK
+	JNZ  	?C0035
+	INC  	pTAK_RM_STK
+?C0035:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R4
+	MOV  	B,#020H
+	MOV  	A,RN_TASK_IDX
+	LCALL	?C?OFFXADD
+	MOV  	A,R7
+	MOVX 	@DPTR,A
+; 		
+; 	}
+			; SOURCE LINE # 43
+	INC  	i
+	MOV  	A,i
+	CJNE 	A,#010H,?C0002
+?C0003:
+; 	
+; 	//寻找下一个任务的下标
+; 	i = 0;
+			; SOURCE LINE # 46
+	CLR  	A
+	MOV  	i,A
+; 	for(p_JCB = C_JCB_START; p_JCB < C_JCB_START + C_MAX_TASK_COUNT * C_JCB_CAPACITY; p_JCB += C_JCB_CAPACITY){		
+			; SOURCE LINE # 47
+	MOV  	p_JCB,#050H
+?C0005:
+	MOV  	A,p_JCB
+	CLR  	C
+	SUBB 	A,#070H
+	JNC  	?C0006
+; 		if(*p_JCB  == JCB_BLOCK && i != RN_TASK_IDX){
+			; SOURCE LINE # 48
+	MOV  	R0,p_JCB
+	MOV  	A,@R0
+	CJNE 	A,#01H,?C0008
+	MOV  	A,i
+	XRL  	A,RN_TASK_IDX
+	JZ   	?C0008
+; 			//上一个任务变为阻塞状态
+; 			*((uchar data*)(C_JCB_START + RN_TASK_IDX * C_JCB_CAPACITY)) = JCB_BLOCK;
+			; SOURCE LINE # 50
+	MOV  	A,RN_TASK_IDX
+	MOV  	B,#08H
+	MUL  	AB
+	ADD  	A,#050H
+	MOV  	R0,A
+	MOV  	@R0,#01H
+; 			//下一任务变成运行态
+; 			RN_TASK_IDX = i;
+			; SOURCE LINE # 52
+	MOV  	RN_TASK_IDX,i
+; 			*(p_JCB++) = JCB_RUN;			
+			; SOURCE LINE # 53
+	MOV  	R7,p_JCB
+	INC  	p_JCB
+	MOV  	R0,AR7
+	MOV  	@R0,#02H
+; 			break;
+			; SOURCE LINE # 54
+	SJMP 	?C0006
+; 		}	
+			; SOURCE LINE # 55
+?C0008:
+; 		++i;
+			; SOURCE LINE # 56
+	INC  	i
+; 	}
+			; SOURCE LINE # 57
+	MOV  	A,#08H
+	ADD  	A,p_JCB
+	MOV  	p_JCB,A
+	SJMP 	?C0005
+?C0006:
+; 	pTAK_RM_STK = C_TASKs_RAM_START + RN_TASK_IDX * C_TASKs_RAM_CAPACITY;//任务数据栈指针	
+			; SOURCE LINE # 58
+	MOV  	B,#020H
+	MOV  	A,RN_TASK_IDX
+	MUL  	AB
+	MOV  	pTAK_RM_STK,B
+	MOV  	pTAK_RM_STK+01H,A
+; 	//恢复ACC	
+; 	Cache_ACC = *(pTAK_RM_STK++);
+			; SOURCE LINE # 60
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R6,pTAK_RM_STK
+	JNZ  	?C0036
+	INC  	pTAK_RM_STK
+?C0036:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R6
+	MOVX 	A,@DPTR
+	MOV  	Cache_ACC,A
+; 	//恢复PSW
+; 	*((uchar*)PSW) = *(pTAK_RM_STK++) & 0xE7;
+			; SOURCE LINE # 62
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R6,pTAK_RM_STK
+	JNZ  	?C0037
+	INC  	pTAK_RM_STK
+?C0037:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R6
+	MOVX 	A,@DPTR
+	ANL  	A,#0E7H
+	MOV  	R1,PSW
+	MOV  	R2,#00H
+	MOV  	R3,#00H
+	LCALL	?C?CSTPTR
+; 	//获取入口地址
+; 	//先从任务RAM中获取		
+; 	Cache_TaskEnter_L = *(pTAK_RM_STK++);
+			; SOURCE LINE # 65
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R6,pTAK_RM_STK
+	JNZ  	?C0038
+	INC  	pTAK_RM_STK
+?C0038:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R6
+	MOVX 	A,@DPTR
+	MOV  	Cache_TaskEnter_L,A
+; 	Cache_TaskEnter_H = *(pTAK_RM_STK++);
+			; SOURCE LINE # 66
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R6,pTAK_RM_STK
+	JNZ  	?C0039
+	INC  	pTAK_RM_STK
+?C0039:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R6
+	MOVX 	A,@DPTR
+	MOV  	Cache_TaskEnter_H,A
+; 	if(Cache_TaskEnter_L == 0x00 && Cache_TaskEnter_H == 0x00){
+			; SOURCE LINE # 67
+	MOV  	A,Cache_TaskEnter_L
+	JNZ  	?C0009
+	MOV  	A,Cache_TaskEnter_H
+	JNZ  	?C0009
+; 		//如果任务数据栈为空，则从JCB获取		
+; 		Cache_TaskEnter_L = *(p_JCB++);
+			; SOURCE LINE # 69
+	MOV  	R7,p_JCB
+	INC  	p_JCB
+	MOV  	R0,AR7
+	MOV  	A,@R0
+	MOV  	Cache_TaskEnter_L,A
+; 		Cache_TaskEnter_H = *(p_JCB++);		
+			; SOURCE LINE # 70
+	MOV  	R7,p_JCB
+	INC  	p_JCB
+	MOV  	R0,AR7
+	MOV  	A,@R0
+	MOV  	Cache_TaskEnter_H,A
+; 	}	
+			; SOURCE LINE # 71
+?C0009:
+; 	//切换任务栈的起始地址
+; 	//先从任务数据栈中获取
+; 	SP = *(pTAK_RM_STK++);
+			; SOURCE LINE # 74
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R6,pTAK_RM_STK
+	JNZ  	?C0040
+	INC  	pTAK_RM_STK
+?C0040:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R6
+	MOVX 	A,@DPTR
+	MOV  	SP,A
+; 	if(SP == 0){
+			; SOURCE LINE # 75
+	MOV  	A,SP
+	JNZ  	?C0010
+; 		//如果任务数据栈为空，则设置为初始任务栈地址
+; 		SP = C_sgTASK_SP_SRART + RN_TASK_IDX * C_sgTASK_SP_CAPACITY;
+			; SOURCE LINE # 77
+	MOV  	A,RN_TASK_IDX
+	SWAP 	A
+	RLC  	A
+	ANL  	A,#0E0H
+	ADD  	A,#080H
+	MOV  	SP,A
+; 	}
+			; SOURCE LINE # 78
+?C0010:
+; 	//恢复寄存器数据
+; 	for(i=0x08;i<0x10;i++){			
+			; SOURCE LINE # 80
+	MOV  	i,#08H
+?C0011:
+; 		*((uchar data*)i) = *(pTAK_RM_STK++);
+			; SOURCE LINE # 81
+	INC  	pTAK_RM_STK+01H
+	MOV  	A,pTAK_RM_STK+01H
+	MOV  	R6,pTAK_RM_STK
+	JNZ  	?C0041
+	INC  	pTAK_RM_STK
+?C0041:
+	DEC  	A
+	MOV  	DPL,A
+	MOV  	DPH,R6
+	MOVX 	A,@DPTR
+	MOV  	R0,i
+	MOV  	@R0,A
+; 	}
+			; SOURCE LINE # 82
+	INC  	i
+	MOV  	A,i
+	CJNE 	A,#010H,?C0011
+?C0012:
+; 
+; 	//跳转
 ; 	#pragma asm		
-; 	MOV A,DPL
-	  MOV A,DPL
+; 	MOV A,Cache_TaskEnter_L
+	  MOV A,Cache_TaskEnter_L
 ; 	PUSH ACC
 	  PUSH ACC
-; 	MOV A,DPH
-	  MOV A,DPH
+; 	MOV A,Cache_TaskEnter_H
+	  MOV A,Cache_TaskEnter_H
 ; 	PUSH ACC
 	  PUSH ACC
 ; 	MOV A,17H	
@@ -186,181 +435,39 @@ DPTR_JMP:
 	  SETB RS0;切换寄存器组到第1区	
 ; 	RET
 	  RET
-; 	#pragma endasm
-; }
-			; SOURCE LINE # 37
-	RET  	
-; END OF DPTR_JMP
-
-; 
-; void OS_taskDispatch(){	
-
-	RSEG  ?PR?OS_taskDispatch?OS
-OS_taskDispatch:
-	USING	0
-			; SOURCE LINE # 39
-; 	//寄存器入栈保护
-; 	uchar i;
-; 	for(i=0x08;i<0x10;i++){		
-			; SOURCE LINE # 42
-;---- Variable 'i?240' assigned to Register 'R7' ----
-	MOV  	R7,#08H
-?C0003:
-; 		//MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
-; 		*(uchar data*)(C_TASKs_RAM_START + RUNNING_TASK_INDEX*C_TASKs_RAM_CAPACITY + p_TASK_RAM_STACK++) = *((uchar data*)i);
-			; SOURCE LINE # 44
-	MOV  	R0,AR7
-	MOV  	A,@R0
-	MOV  	R6,A
-	MOV  	A,RUNNING_TASK_INDEX
-	SWAP 	A
-	ANL  	A,#0F0H
-	ADD  	A,#030H
-	MOV  	R4,p_TASK_RAM_STACK
-	INC  	p_TASK_RAM_STACK
-	MOV  	R0,AR4
-	ADD  	A,R0
-	MOV  	R0,A
-	MOV  	@R0,AR6
-; 	}
-			; SOURCE LINE # 45
-	INC  	R7
-	CJNE 	R7,#010H,?C0003
-?C0004:
-; 	
-; 	//IF(当前任务下标==任务总数)
-; 	++RUNNING_TASK_INDEX;
-			; SOURCE LINE # 48
-	INC  	RUNNING_TASK_INDEX
-; 	if(RUNNING_TASK_INDEX == TASKs_COUNT){
-			; SOURCE LINE # 49
-	MOV  	A,RUNNING_TASK_INDEX
-	CJNE 	A,TASKs_COUNT,?C0006
-; 		RUNNING_TASK_INDEX = 0x00;
-			; SOURCE LINE # 50
-	CLR  	A
-	MOV  	RUNNING_TASK_INDEX,A
-; 	}
-			; SOURCE LINE # 51
-?C0006:
-; 	p_sg_TASK_RAM = C_TASKs_RAM_START + RUNNING_TASK_INDEX * C_TASKs_RAM_CAPACITY;//任务数据栈指针	
-			; SOURCE LINE # 52
-	MOV  	A,RUNNING_TASK_INDEX
-	SWAP 	A
-	ANL  	A,#0F0H
-	ADD  	A,#030H
-	MOV  	p_sg_TASK_RAM,A
-; 	//恢复ACC	
-; 	OS_TEMP_ACC = *(p_sg_TASK_RAM++);
-			; SOURCE LINE # 54
-	MOV  	R6,A
-	INC  	p_sg_TASK_RAM
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	MOV  	OS_TEMP_ACC,A
-; 	//恢复PSW
-; 	*((uchar*)PSW) = *(p_sg_TASK_RAM++) & 0xE7;
-			; SOURCE LINE # 56
-	MOV  	R6,p_sg_TASK_RAM
-	INC  	p_sg_TASK_RAM
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	ANL  	A,#0E7H
-	MOV  	R1,PSW
-	MOV  	R2,#00H
-	MOV  	R3,#00H
-	LCALL	?C?CSTPTR
-; 	//获取入口地址
-; 	//先从任务数据栈中获取		
-; 	DPL = *(p_sg_TASK_RAM++);
-			; SOURCE LINE # 59
-	MOV  	R6,p_sg_TASK_RAM
-	INC  	p_sg_TASK_RAM
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	MOV  	DPL,A
-; 	DPH = *(p_sg_TASK_RAM++);
-			; SOURCE LINE # 60
-	MOV  	R6,p_sg_TASK_RAM
-	INC  	p_sg_TASK_RAM
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	MOV  	DPH,A
-; 	if(DPL == 0x00 && DPH == 0x00){
-			; SOURCE LINE # 61
-	MOV  	A,DPL
-	JNZ  	?C0007
-	MOV  	A,DPH
-	JNZ  	?C0007
-; 		//如果任务数据栈为空，则从任务地址栈获取
-; 		p_TASK_STACK = C_TASKs_STACK_START + RUNNING_TASK_INDEX * 0x02;//任务地址栈指针
-			; SOURCE LINE # 63
-	MOV  	A,RUNNING_TASK_INDEX
-	ADD  	A,ACC
-	ADD  	A,#020H
-	MOV  	p_TASK_STACK,A
-; 		DPL = *(p_TASK_STACK++);
-			; SOURCE LINE # 64
-	MOV  	R6,A
-	INC  	p_TASK_STACK
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	MOV  	DPL,A
-; 		DPH = *p_TASK_STACK;
-			; SOURCE LINE # 65
-	MOV  	R0,p_TASK_STACK
-	MOV  	A,@R0
-	MOV  	DPH,A
-; 	}	
-			; SOURCE LINE # 66
-?C0007:
-; 	//切换任务栈的起始地址
-; 	//先从任务数据栈中获取
-; 	SP = *(p_sg_TASK_RAM++);
-			; SOURCE LINE # 69
-	MOV  	R6,p_sg_TASK_RAM
-	INC  	p_sg_TASK_RAM
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	MOV  	SP,A
-; 	if(SP == 0){
-			; SOURCE LINE # 70
-	MOV  	A,SP
-	JNZ  	?C0008
-; 		//如果任务数据栈为空，则设置为初始任务栈地址
-; 		SP = C_sgTASK_SP_SRART + RUNNING_TASK_INDEX * C_sgTASK_SP_CAPACITY;
-			; SOURCE LINE # 72
-	MOV  	A,RUNNING_TASK_INDEX
-	SWAP 	A
-	ANL  	A,#0F0H
-	ADD  	A,#050H
-	MOV  	SP,A
-; 	}
-			; SOURCE LINE # 73
-?C0008:
-; 	//恢复寄存器数据
-; 	for(i=0x08;i<0x10;i++){			
-			; SOURCE LINE # 75
-	MOV  	R7,#08H
-?C0009:
-; 		*((uchar data*)i) = *(p_sg_TASK_RAM++);
-			; SOURCE LINE # 76
-	MOV  	R6,p_sg_TASK_RAM
-	INC  	p_sg_TASK_RAM
-	MOV  	R0,AR6
-	MOV  	A,@R0
-	MOV  	R0,AR7
-	MOV  	@R0,A
-; 	}
-			; SOURCE LINE # 77
-	INC  	R7
-	CJNE 	R7,#010H,?C0009
-?C0010:
-; 	//跳转
-; 	DPTR_JMP();	
-			; SOURCE LINE # 79
-	LJMP 	DPTR_JMP
+?C0014:
+; 	#pragma endasm	
+; 	while(1);
+			; SOURCE LINE # 94
+	SJMP 	?C0014
 ; END OF OS_taskDispatch
+
+; }
+; 
+; void OS_TaskRecover(){		
+
+	RSEG  ?PR?OS_TaskRecover?OS
+OS_TaskRecover:
+	USING	0
+			; SOURCE LINE # 97
+; 	//设置JCB	
+; 	p_JCB = C_JCB_START + RN_TASK_IDX * C_JCB_CAPACITY;//任务地址栈指针
+			; SOURCE LINE # 99
+	MOV  	A,RN_TASK_IDX
+	MOV  	B,#08H
+	MUL  	AB
+	ADD  	A,#050H
+	MOV  	p_JCB,A
+; 	*p_JCB = JCB_DESTORY;	
+			; SOURCE LINE # 100
+	MOV  	R0,A
+	CLR  	A
+	MOV  	@R0,A
+?C0017:
+; 	while(1);
+			; SOURCE LINE # 101
+	SJMP 	?C0017
+; END OF OS_TaskRecover
 
 ; }
 ; 
@@ -369,70 +476,96 @@ OS_taskDispatch:
 	RSEG  ?PR?_sleep?OS
 _sleep:
 	USING	0
-			; SOURCE LINE # 82
-;---- Variable 'ms?341' assigned to Register 'R7' ----
+			; SOURCE LINE # 104
+;---- Variable 'ms?340' assigned to Register 'R7' ----
 ; {
-			; SOURCE LINE # 83
+			; SOURCE LINE # 105
 ; 	unsigned char a,b,c;
 ;     for(c=ms;c>0;c--)
-			; SOURCE LINE # 85
-;---- Variable 'c?344' assigned to Register 'R7' ----
-?C0013:
+			; SOURCE LINE # 107
+;---- Variable 'c?343' assigned to Register 'R7' ----
+?C0020:
 	MOV  	A,R7
 	SETB 	C
 	SUBB 	A,#00H
-	JC   	?C0022
-;         for(b=142;b>0;b--)
-			; SOURCE LINE # 86
-;---- Variable 'b?343' assigned to Register 'R6' ----
+	JC   	?C0029
+;       for(b=142;b>0;b--)
+			; SOURCE LINE # 108
+;---- Variable 'b?342' assigned to Register 'R6' ----
 	MOV  	R6,#08EH
-?C0016:
-;             for(a=2;a>0;a--);
-			; SOURCE LINE # 87
-;---- Variable 'a?342' assigned to Register 'R5' ----
+?C0023:
+;         for(a=2;a>0;a--);
+			; SOURCE LINE # 109
+;---- Variable 'a?341' assigned to Register 'R5' ----
 	MOV  	R5,#02H
-?C0019:
-	DJNZ 	R5,?C0019
-?C0018:
-	DJNZ 	R6,?C0016
-?C0015:
-	DEC  	R7
-	SJMP 	?C0013
-; }
-			; SOURCE LINE # 88
+?C0026:
+	DJNZ 	R5,?C0026
+?C0025:
+	DJNZ 	R6,?C0023
 ?C0022:
+	DEC  	R7
+	SJMP 	?C0020
+; }
+			; SOURCE LINE # 110
+?C0029:
 	RET  	
 ; END OF _sleep
 
 ; 
-; void addTask(uint task){
+; void addTask(uint task){		
 
 	RSEG  ?PR?_addTask?OS
 _addTask:
 	USING	0
-			; SOURCE LINE # 90
-;---- Variable 'task?445' assigned to Register 'R6/R7' ----
-; 	
-; 	*p_TASKs_STACK = task;
-			; SOURCE LINE # 92
+			; SOURCE LINE # 112
+;---- Variable 'task?444' assigned to Register 'R6/R7' ----
+; 	for(p_JCB = C_JCB_START; p_JCB < C_JCB_START + C_MAX_TASK_COUNT * C_JCB_CAPACITY; p_JCB += C_JCB_CAPACITY){
+			; SOURCE LINE # 113
+	MOV  	p_JCB,#050H
+?C0030:
+	MOV  	A,p_JCB
+	CLR  	C
+	SUBB 	A,#070H
+	JNC  	?C0034
+; 		if(*p_JCB == JCB_DESTORY){
+			; SOURCE LINE # 114
+	MOV  	R0,p_JCB
+	MOV  	A,@R0
+	JNZ  	?C0032
+; 			*(p_JCB++) = JCB_BLOCK;
+			; SOURCE LINE # 115
+	MOV  	R5,p_JCB
+	INC  	p_JCB
+	MOV  	R0,AR5
+	MOV  	@R0,#01H
+; 			*(p_JCB++) = task;
+			; SOURCE LINE # 116
 	MOV  	R5,AR7
-	MOV  	R0,p_TASKs_STACK
+	MOV  	R4,p_JCB
+	INC  	p_JCB
+	MOV  	R0,AR4
 	MOV  	@R0,AR5
-; 	++p_TASKs_STACK;
-			; SOURCE LINE # 93
-	INC  	p_TASKs_STACK
-; 	*p_TASKs_STACK = task >> 8;
-			; SOURCE LINE # 94
+; 			*(p_JCB++) = task >> 8;
+			; SOURCE LINE # 117
 	MOV  	R7,AR6
-	MOV  	R0,p_TASKs_STACK
+	MOV  	R6,p_JCB
+	INC  	p_JCB
+	MOV  	R0,AR6
 	MOV  	@R0,AR7
-; 	++p_TASKs_STACK;
-			; SOURCE LINE # 95
-	INC  	p_TASKs_STACK
-; 	++TASKs_COUNT;	
-			; SOURCE LINE # 96
-	INC  	TASKs_COUNT
-; }			; SOURCE LINE # 97
+; 			break;
+			; SOURCE LINE # 118
+	RET  	
+; 		}
+			; SOURCE LINE # 119
+; 	}		
+			; SOURCE LINE # 120
+?C0032:
+	MOV  	A,#08H
+	ADD  	A,p_JCB
+	MOV  	p_JCB,A
+	SJMP 	?C0030
+; }			; SOURCE LINE # 121
+?C0034:
 	RET  	
 ; END OF _addTask
 
