@@ -1,4 +1,4 @@
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     1
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     1
 
 
 MACRO ASSEMBLER A51 V8.02b
@@ -7,10 +7,10 @@ ASSEMBLER INVOKED BY: D:\c51\c51v952\C51\BIN\A51.EXE os.src PR(.\os.ls1) EP DEBU
 
 LOC  OBJ            LINE     SOURCE
 
-                       1     ; .\os.SRC generated from: os.c
+                       1     ; .\os.SRC generated from: os\os.c
                        2     ; COMPILER INVOKED BY:
-                       3     ;        D:\c51\c51v952\C51\BIN\C51.EXE os.c BROWSE DEBUG OBJECTEXTEND TABS(2) SRC(.\os.SRC
-                             )
+                       3     ;        D:\c51\c51v952\C51\BIN\C51.EXE os\os.c BROWSE NOAREGS DEBUG OBJECTEXTEND PRINT(.\o
+                             s.lst) TABS(2) SRC(.\os.SRC)
                        4     
                        5     $nomod51 
                        6     
@@ -65,7 +65,7 @@ LOC  OBJ            LINE     SOURCE
   008C                55     TH0     DATA    08CH
   00A8                56     EX0     BIT     0A8H.0
   0088                57     IT0     BIT     088H.0
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     2
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     2
 
   008D                58     TH1     DATA    08DH
   009B                59     TB8     BIT     098H.3
@@ -99,653 +99,1444 @@ LOC  OBJ            LINE     SOURCE
   00D5                87     F0      BIT     0D0H.5
   00D0                88     PSW     DATA    0D0H
                       89     ?PR?OS_Main?OS       SEGMENT CODE 
-                      90     ?PR?OS_taskDispatch?OS                   SEGMENT CODE 
-                      91     ?PR?OS_TaskRecover?OS                    SEGMENT CODE 
-                      92     ?PR?_sleep?OS        SEGMENT CODE 
-                      93     ?PR?_addTask?OS      SEGMENT CODE 
-                      94             EXTRN   CODE (addTasks)
-                      95             EXTRN   CODE (?C?OFFXADD)
-                      96             EXTRN   CODE (?C?CSTPTR)
-                      97             PUBLIC  RN_TASK_IDX
-                      98             PUBLIC  Cache_TaskEnter_L
-                      99             PUBLIC  Cache_TaskEnter_H
-                     100             PUBLIC  i
-                     101             PUBLIC  pTAK_RM_STK
-                     102             PUBLIC  p_JCB
-                     103             PUBLIC  ITRPT_COUNT
-                     104             PUBLIC  Cache_ACC
-                     105             PUBLIC  _addTask
-                     106             PUBLIC  _sleep
-                     107             PUBLIC  OS_TaskRecover
-                     108             PUBLIC  OS_taskDispatch
-                     109             PUBLIC  OS_Main
-                     110     
-----                 111             DSEG  AT  040H
-0040                 112           Cache_ACC:   DS   1
-                     113     
-----                 114             DSEG  AT  031H
-0031                 115         ITRPT_COUNT:   DS   1
-                     116     
-----                 117             DSEG  AT  034H
-0034                 118               p_JCB:   DS   1
-                     119     
-----                 120             DSEG  AT  032H
-0032                 121         pTAK_RM_STK:   DS   2
-                     122     
-----                 123             DSEG  AT  043H
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     3
+                      90     ?PR?_malloc?OS       SEGMENT CODE 
+                      91     ?DT?_malloc?OS       SEGMENT DATA OVERLAYABLE 
+                      92     ?PR?_free?OS         SEGMENT CODE 
+                      93     ?DT?_free?OS         SEGMENT DATA OVERLAYABLE 
+                      94     ?PR?GC?OS            SEGMENT CODE 
+                      95     ?PR?_GC_modifyHeapManagerUnits?OS        SEGMENT CODE 
+                      96     ?DT?_GC_modifyHeapManagerUnits?OS        SEGMENT DATA OVERLAYABLE 
+                      97     ?PR?_GC_moveBytes?OS SEGMENT CODE 
+                      98     ?DT?_GC_moveBytes?OS SEGMENT DATA OVERLAYABLE 
+                      99     ?PR?_getDataMemoryUnit?OS                SEGMENT CODE 
+                     100     ?PR?_getXDataMemoryUnit?OS               SEGMENT CODE 
+                     101     ?PR?lock?OS          SEGMENT CODE 
+                     102     ?PR?unlock?OS        SEGMENT CODE 
+                     103     ?PR?yield?OS         SEGMENT CODE 
+                     104     ?PR?OS_taskDispatch?OS                   SEGMENT CODE 
+                     105     ?PR?OS_TaskRecover?OS                    SEGMENT CODE 
+                     106     ?PR?_sleep?OS        SEGMENT CODE 
+                     107     ?PR?_addTask?OS      SEGMENT CODE 
+                     108             EXTRN   CODE (addTasks)
+                     109             EXTRN   CODE (?C?ISTPTR)
+                     110             EXTRN   CODE (?C?ILDPTR)
+                     111             EXTRN   CODE (?C?OFFXADD)
+                     112             EXTRN   CODE (?C?CSTPTR)
+                     113             PUBLIC  RN_TASK_IDX
+                     114             PUBLIC  Cache_TaskEnter_L
+                     115             PUBLIC  Cache_TaskEnter_H
+                     116             PUBLIC  Cache_px_uint1
+                     117             PUBLIC  FREE_MEMORY
+                     118             PUBLIC  p_Heap
+                     119             PUBLIC  Cache_px_uchar1
+                     120             PUBLIC  Cache_uint2
+                     121             PUBLIC  Cache_uint1
+                     122             PUBLIC  pTAK_RM_STK
+                     123             PUBLIC  p_JCB
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     3
 
-0043                 124                   i:   DS   1
-                     125     
-----                 126             DSEG  AT  042H
-0042                 127     Cache_TaskEnter_H:   DS   1
-                     128     
-----                 129             DSEG  AT  041H
-0041                 130     Cache_TaskEnter_L:   DS   1
-                     131     
-----                 132             DSEG  AT  030H
-0030                 133         RN_TASK_IDX:   DS   1
-                     134     ; #include "os.h"
-                     135     ; 
-                     136     ; uchar RN_TASK_IDX _at_ 0x30;            //当前任务下标
-                     137     ; uchar ITRPT_COUNT _at_ 0x31;                  //中断次数
-                     138     ; uchar xdata *pTAK_RM_STK _at_ 0x32;//任务RAM栈指针       
-                     139     ; uchar data *p_JCB _at_ 0x34;            //JCB地址栈指针
-                     140     ; 
-                     141     ; #define C_MAX_TASK_COUNT 0x04               //最多任务数
-                     142     ; #define C_JCB_START 0x50                    //JCB起始地址
-                     143     ; #define C_TASKs_RAM_START 0x0000      //任务RAM起始地址 
-                     144     ; #define C_sgTASK_SP_SRART 0x80                //任务栈数据起始地址
-                     145     ; #define C_MAIN_SP_START 0x70                  //默认栈数据起始地址
-                     146     ; #define C_JCB_CAPACITY 0x08         //JCB容量
-                     147     ; #define C_TASKs_RAM_CAPACITY 0x20 //单个任务最大容量
-                     148     ; #define C_sgTASK_SP_CAPACITY 0x20     //单个任务栈最大容量
-                     149     ; 
-                     150     ; #define JCB_DESTORY 0x00
-                     151     ; #define JCB_BLOCK 0x01
-                     152     ; #define JCB_RUN 0x02
-                     153     ; 
-                     154     ; uchar data Cache_ACC _at_ 0x40;        //ACC临时变量
-                     155     ; uchar data Cache_TaskEnter_L _at_ 0x41;//任务人口地址L临时变量
-                     156     ; uchar data Cache_TaskEnter_H _at_ 0x42;//任务人口地址H临时变量
-                     157     ; uchar data i _at_ 0x43;                //临时变量i
-                     158     ; 
-                     159     ; extern void addTasks();
-                     160     ; extern void pushTaskData();
-                     161     ; 
-                     162     ; 
-                     163     ; 
-                     164     ; void OS_Main(){
-                     165     
-----                 166             RSEG  ?PR?OS_Main?OS
-0000                 167     OS_Main:
-                     168             USING   0
-                     169                             ; SOURCE LINE # 31
-                     170     ;       addTasks();
-                     171                             ; SOURCE LINE # 32
-0000 020000   F      172             LJMP    addTasks
-                     173     ; END OF OS_Main
-                     174     
-                     175     ; }
-                     176     ; 
-                     177     ; 
-                     178     ; void OS_taskDispatch(){
-                     179     
-----                 180             RSEG  ?PR?OS_taskDispatch?OS
-0000                 181     OS_taskDispatch:
-                     182             USING   0
-                     183                             ; SOURCE LINE # 36
-                     184     ; 
-                     185     ;       //寄存器入栈保护 
-                     186     ;       for(i=0x08;i<0x10;i++){         
-                     187                             ; SOURCE LINE # 39
-0000 754308          188             MOV     i,#08H
-0003                 189     ?C0002:
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     4
+                     124             PUBLIC  p_HeapManager
+                     125             PUBLIC  ITRPT_COUNT
+                     126             PUBLIC  Cache_uchar3
+                     127             PUBLIC  Cache_uchar2
+                     128             PUBLIC  Cache_ACC
+                     129             PUBLIC  Cache_uchar1
+                     130             PUBLIC  _addTask
+                     131             PUBLIC  _sleep
+                     132             PUBLIC  OS_TaskRecover
+                     133             PUBLIC  OS_taskDispatch
+                     134             PUBLIC  yield
+                     135             PUBLIC  unlock
+                     136             PUBLIC  lock
+                     137             PUBLIC  _getXDataMemoryUnit
+                     138             PUBLIC  _getDataMemoryUnit
+                     139             PUBLIC  _GC_moveBytes
+                     140             PUBLIC  _GC_modifyHeapManagerUnits
+                     141             PUBLIC  GC
+                     142             PUBLIC  _free
+                     143             PUBLIC  _malloc
+                     144             PUBLIC  OS_Main
+                     145     
+----                 146             DSEG  AT  043H
+0043                 147        Cache_uchar1:   DS   1
+                     148     
+----                 149             DSEG  AT  040H
+0040                 150           Cache_ACC:   DS   1
+                     151     
+----                 152             DSEG  AT  044H
+0044                 153        Cache_uchar2:   DS   1
+                     154     
+----                 155             DSEG  AT  045H
+0045                 156        Cache_uchar3:   DS   1
+                     157     
+----                 158             DSEG  AT  031H
+0031                 159         ITRPT_COUNT:   DS   1
+                     160     
+----                 161             DSEG  AT  035H
+0035                 162       p_HeapManager:   DS   2
+                     163     
+----                 164             DSEG  AT  034H
+0034                 165               p_JCB:   DS   1
+                     166     
+----                 167             DSEG  AT  032H
+0032                 168         pTAK_RM_STK:   DS   2
+                     169     
+----                 170             DSEG  AT  046H
+0046                 171         Cache_uint1:   DS   2
+                     172     
+----                 173             DSEG  AT  048H
+0048                 174         Cache_uint2:   DS   2
+                     175     
+----                 176             DSEG  AT  04AH
+004A                 177     Cache_px_uchar1:   DS   2
+                     178     
+----                 179             DSEG  AT  037H
+0037                 180              p_Heap:   DS   2
+                     181     
+----                 182             DSEG  AT  039H
+0039                 183         FREE_MEMORY:   DS   2
+                     184     
+----                 185             DSEG  AT  04CH
+004C                 186      Cache_px_uint1:   DS   2
+                     187     
+----                 188             DSEG  AT  042H
+0042                 189     Cache_TaskEnter_H:   DS   1
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     4
 
-                     190     ;               //MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
-                     191     ;               *((uchar xdata *)(C_TASKs_RAM_START + RN_TASK_IDX*C_TASKs_RAM_CAPACITY + pT
-                             AK_RM_STK++)) = *((uchar data*)i);
-                     192                             ; SOURCE LINE # 41
-0003 A843            193             MOV     R0,i
-0005 E6              194             MOV     A,@R0
-0006 FF              195             MOV     R7,A
-0007 0533            196             INC     pTAK_RM_STK+01H
-0009 E533            197             MOV     A,pTAK_RM_STK+01H
-000B AC32            198             MOV     R4,pTAK_RM_STK
-000D 7002            199             JNZ     ?C0035
-000F 0532            200             INC     pTAK_RM_STK
-0011                 201     ?C0035:
-0011 14              202             DEC     A
-0012 F582            203             MOV     DPL,A
-0014 8C83            204             MOV     DPH,R4
-0016 75F020          205             MOV     B,#020H
-0019 E530            206             MOV     A,RN_TASK_IDX
-001B 120000   F      207             LCALL   ?C?OFFXADD
-001E EF              208             MOV     A,R7
-001F F0              209             MOVX    @DPTR,A
-                     210     ;               
-                     211     ;       }
-                     212                             ; SOURCE LINE # 43
-0020 0543            213             INC     i
-0022 E543            214             MOV     A,i
-0024 B410DC          215             CJNE    A,#010H,?C0002
-0027                 216     ?C0003:
-                     217     ;       
-                     218     ;       //寻找下一个任务的下标
-                     219     ;       i = 0;
-                     220                             ; SOURCE LINE # 46
-0027 E4              221             CLR     A
-0028 F543            222             MOV     i,A
-                     223     ;       for(p_JCB = C_JCB_START; p_JCB < C_JCB_START + C_MAX_TASK_COUNT * C_JCB_CAPACITY; p
-                             _JCB += C_JCB_CAPACITY){             
-                     224                             ; SOURCE LINE # 47
-002A 753450          225             MOV     p_JCB,#050H
-002D                 226     ?C0005:
-002D E534            227             MOV     A,p_JCB
-002F C3              228             CLR     C
-0030 9470            229             SUBB    A,#070H
-0032 502E            230             JNC     ?C0006
-                     231     ;               if(*p_JCB  == JCB_BLOCK && i != RN_TASK_IDX){
-                     232                             ; SOURCE LINE # 48
-0034 A834            233             MOV     R0,p_JCB
-0036 E6              234             MOV     A,@R0
-0037 B4011E          235             CJNE    A,#01H,?C0008
-003A E543            236             MOV     A,i
-003C 6530            237             XRL     A,RN_TASK_IDX
-003E 6018            238             JZ      ?C0008
-                     239     ;                       //上一个任务变为阻塞状态
-                     240     ;                       *((uchar data*)(C_JCB_START + RN_TASK_IDX * C_JCB_CAPACITY)) = JCB_
-                             BLOCK;
-                     241                             ; SOURCE LINE # 50
-0040 E530            242             MOV     A,RN_TASK_IDX
-0042 75F008          243             MOV     B,#08H
-0045 A4              244             MUL     AB
-0046 2450            245             ADD     A,#050H
-0048 F8              246             MOV     R0,A
-0049 7601            247             MOV     @R0,#01H
-                     248     ;                       //下一任务变成运行态
-                     249     ;                       RN_TASK_IDX = i;
-                     250                             ; SOURCE LINE # 52
-004B 854330          251             MOV     RN_TASK_IDX,i
-                     252     ;                       *(p_JCB++) = JCB_RUN;                   
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     5
+                     190     
+----                 191             DSEG  AT  041H
+0041                 192     Cache_TaskEnter_L:   DS   1
+                     193     
+----                 194             DSEG  AT  030H
+0030                 195         RN_TASK_IDX:   DS   1
+                     196     
+----                 197             RSEG  ?DT?_free?OS
+0000                 198     ?_free?BYTE:
+0000                 199               p?242:   DS   3
+                     200     
+----                 201             RSEG  ?DT?_GC_moveBytes?OS
+0000                 202     ?_GC_moveBytes?BYTE:
+0000                 203             end?546:   DS   2
+                     204     
+----                 205             RSEG  ?DT?_GC_modifyHeapManagerUnits?OS
+0000                 206     ?_GC_modifyHeapManagerUnits?BYTE:
+0000                 207     address_threshold?443:   DS   2
+0002                 208             ORG  2
+0002                 209          length?444:   DS   1
+                     210     
+----                 211             RSEG  ?DT?_malloc?OS
+0000                 212     ?_malloc?BYTE:
+0000                 213          size_t?140:   DS   1
+0001                 214             ORG  1
+0001                 215               p?141:   DS   3
+                     216     ; #include "os.h"
+                     217     ; 
+                     218     ; uchar RN_TASK_IDX _at_ 0x30;                 //当前任务下标
+                     219     ; uchar ITRPT_COUNT _at_ 0x31;                       //中断次数
+                     220     ; uchar xdata *pTAK_RM_STK _at_ 0x32;    //任务RAM栈指针   
+                     221     ; uchar data *p_JCB _at_ 0x34;                 //JCB地址栈指针
+                     222     ; uchar xdata *p_HeapManager _at_ 0x35;  //堆管理器地址指针
+                     223     ; uint p_Heap _at_ 0x37;                     //堆地址指针
+                     224     ; uint FREE_MEMORY _at_ 0x39; //剩余堆内存
+                     225     ; 
+                     226     ; #define C_MAX_TASK_COUNT 0x04           //最多任务数
+                     227     ; #define C_JCB_START 0x50                    //JCB起始地址
+                     228     ; #define C_TASKs_RAM_START 0x0000      //任务RAM起始地址 
+                     229     ; #define C_sgTASK_SP_SRART 0x80                //任务栈数据起始地址
+                     230     ; #define C_MAIN_SP_START 0x70                  //默认栈数据起始地址
+                     231     ; #define C_JCB_CAPACITY 0x08         //JCB容量
+                     232     ; #define C_TASKs_RAM_CAPACITY 0x20 //单个任务最大容量
+                     233     ; #define C_sgTASK_SP_CAPACITY 0x20     //单个任务栈最大容量
+                     234     ; #define C_HeapManager_START 0x80  //堆管理器起始地址
+                     235     ; #define C_sgHeapManager_CAPACITY 0x04//堆管理器单元容量
+                     236     ; #define C_Heap_START 0x160           //堆起始地址
+                     237     ; #define C_Heap_END 0x7FF        //堆结束地址
+                     238     ; 
+                     239     ; #define JCB_DESTORY 0x00
+                     240     ; #define JCB_BLOCK 0x01
+                     241     ; #define JCB_RUN 0x02
+                     242     ; 
+                     243     ; #define MEMORY_LEN(X) *X
+                     244     ; #define MEMORY_START(X) *((uint xdata *)(X + 1))
+                     245     ; #define MEMORY_P_ADRESS(X) *(X + 3)   
+                     246     ; 
+                     247     ; uchar data Cache_ACC _at_ 0x40;        //ACC临时变量
+                     248     ; uchar data Cache_TaskEnter_L _at_ 0x41;//任务人口地址L临时变量
+                     249     ; uchar data Cache_TaskEnter_H _at_ 0x42;//任务人口地址H临时变量
+                     250     ; uchar data Cache_uchar1 _at_ 0x43;      //临时变量1   
+                     251     ; uchar data Cache_uchar2 _at_ 0x44;      //临时变量2 
+                     252     ; uchar data Cache_uchar3 _at_ 0x45;      //临时变量3
+                     253     ; uint data Cache_uint1 _at_ 0x46;         
+                     254     ; uint data Cache_uint2 _at_ 0x48;
+                     255     ; uchar xdata *Cache_px_uchar1 _at_ 0x4A;
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     5
 
-                     253                             ; SOURCE LINE # 53
-004E AF34            254             MOV     R7,p_JCB
-0050 0534            255             INC     p_JCB
-0052 A807            256             MOV     R0,AR7
-0054 7602            257             MOV     @R0,#02H
-                     258     ;                       break;
-                     259                             ; SOURCE LINE # 54
-0056 800A            260             SJMP    ?C0006
-                     261     ;               }       
-                     262                             ; SOURCE LINE # 55
-0058                 263     ?C0008:
-                     264     ;               ++i;
-                     265                             ; SOURCE LINE # 56
-0058 0543            266             INC     i
-                     267     ;       }
-                     268                             ; SOURCE LINE # 57
-005A 7408            269             MOV     A,#08H
-005C 2534            270             ADD     A,p_JCB
-005E F534            271             MOV     p_JCB,A
-0060 80CB            272             SJMP    ?C0005
-0062                 273     ?C0006:
-                     274     ;       pTAK_RM_STK = C_TASKs_RAM_START + RN_TASK_IDX * C_TASKs_RAM_CAPACITY;//任务数据
+                     256     ; uint xdata *Cache_px_uint1 _at_ 0x4C;
+                     257     ; 
+                     258     ; extern void addTasks();
+                     259     ; extern void pushTaskData();
+                     260     ; 
+                     261     ; void GC_modifyHeapManagerUnits(uint address_threshold, uchar length);
+                     262     ; void GC_moveBytes(uint start, uint end, uchar length);
+                     263     ; 
+                     264     ; 
+                     265     ; void OS_Main(){
+                     266     
+----                 267             RSEG  ?PR?OS_Main?OS
+0000                 268     OS_Main:
+                     269             USING   0
+                     270                             ; SOURCE LINE # 50
+                     271     ;       addTasks();
+                     272                             ; SOURCE LINE # 51
+0000 120000   F      273             LCALL   addTasks
+                     274     ;       p_Heap = C_Heap_START;
+                     275                             ; SOURCE LINE # 52
+0003 753701          276             MOV     p_Heap,#01H
+0006 753860          277             MOV     p_Heap+01H,#060H
+                     278     ; }
+                     279                             ; SOURCE LINE # 53
+0009 22              280             RET     
+                     281     ; END OF OS_Main
+                     282     
+                     283     ; 
+                     284     ; 
+                     285     ; void malloc(uchar size_t, uchar xdata ** p){
+                     286     
+----                 287             RSEG  ?PR?_malloc?OS
+0000                 288     _malloc:
+                     289             USING   0
+                     290                             ; SOURCE LINE # 56
+0000 8F00     F      291             MOV     size_t?140,R7
+0002 8B00     F      292             MOV     p?141,R3
+0004 8A00     F      293             MOV     p?141+01H,R2
+0006 8900     F      294             MOV     p?141+02H,R1
+                     295     ;       lock();
+                     296                             ; SOURCE LINE # 57
+0008 120000   F      297             LCALL   lock
+                     298     ;       //在堆管理器内存查找可用的空间
+                     299     ;       p_HeapManager = C_HeapManager_START;
+                     300                             ; SOURCE LINE # 59
+000B 753500          301             MOV     p_HeapManager,#00H
+000E 753680          302             MOV     p_HeapManager+01H,#080H
+0011                 303     ?C0002:
+                     304     ;       while(MEMORY_P_ADRESS(p_HeapManager)){
+                     305                             ; SOURCE LINE # 60
+0011 853682          306             MOV     DPL,p_HeapManager+01H
+0014 853583          307             MOV     DPH,p_HeapManager
+0017 A3              308             INC     DPTR
+0018 A3              309             INC     DPTR
+0019 A3              310             INC     DPTR
+001A E0              311             MOVX    A,@DPTR
+001B 600D            312             JZ      ?C0003
+                     313     ;               p_HeapManager += C_sgHeapManager_CAPACITY;
+                     314                             ; SOURCE LINE # 61
+001D 7404            315             MOV     A,#04H
+001F 2536            316             ADD     A,p_HeapManager+01H
+0021 F536            317             MOV     p_HeapManager+01H,A
+0023 E4              318             CLR     A
+0024 3535            319             ADDC    A,p_HeapManager
+0026 F535            320             MOV     p_HeapManager,A
+                     321     ;       }
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     6
+
+                     322                             ; SOURCE LINE # 62
+0028 80E7            323             SJMP    ?C0002
+002A                 324     ?C0003:
+                     325     ;       //第1个字节存放需开辟内存的字节数
+                     326     ;       MEMORY_LEN(p_HeapManager) = size_t;             
+                     327                             ; SOURCE LINE # 64
+002A 853682          328             MOV     DPL,p_HeapManager+01H
+002D 853583          329             MOV     DPH,p_HeapManager
+0030 E500     F      330             MOV     A,size_t?140
+0032 F0              331             MOVX    @DPTR,A
+                     332     ;       //第2、3字节记录该内存起始地址
+                     333     ;       MEMORY_START(p_HeapManager) = p_Heap;
+                     334                             ; SOURCE LINE # 66
+0033 A3              335             INC     DPTR
+0034 E537            336             MOV     A,p_Heap
+0036 F0              337             MOVX    @DPTR,A
+0037 A3              338             INC     DPTR
+0038 E538            339             MOV     A,p_Heap+01H
+003A F0              340             MOVX    @DPTR,A
+                     341     ;       //第4字节记录指针在内存中的位置
+                     342     ;       MEMORY_P_ADRESS(p_HeapManager) = (uchar)p;      
+                     343                             ; SOURCE LINE # 68
+003B AB00     F      344             MOV     R3,p?141
+003D AA00     F      345             MOV     R2,p?141+01H
+003F A900     F      346             MOV     R1,p?141+02H
+0041 CF              347             XCH     A,R7
+0042 E9              348             MOV     A,R1
+0043 CF              349             XCH     A,R7
+0044 853682          350             MOV     DPL,p_HeapManager+01H
+0047 853583          351             MOV     DPH,p_HeapManager
+004A A3              352             INC     DPTR
+004B A3              353             INC     DPTR
+004C A3              354             INC     DPTR
+004D EF              355             MOV     A,R7
+004E F0              356             MOVX    @DPTR,A
+                     357     ;       //当前堆指针起始地址赋值给p
+                     358     ;       *p = (uchar*)p_Heap;
+                     359                             ; SOURCE LINE # 70
+004F E537            360             MOV     A,p_Heap
+0051 8538F0          361             MOV     B,p_Heap+01H
+0054 120000   F      362             LCALL   ?C?ISTPTR
+                     363     ;               //堆指针后移       
+                     364     ;       p_Heap += size_t;
+                     365                             ; SOURCE LINE # 72
+0057 E500     F      366             MOV     A,size_t?140
+0059 2538            367             ADD     A,p_Heap+01H
+005B F538            368             MOV     p_Heap+01H,A
+005D E4              369             CLR     A
+005E 3537            370             ADDC    A,p_Heap
+0060 F537            371             MOV     p_Heap,A
+                     372     ;       unlock();
+                     373                             ; SOURCE LINE # 73
+0062 020000   F      374             LJMP    unlock
+                     375     ; END OF _malloc
+                     376     
+                     377     ; }
+                     378     ; 
+                     379     ; void free(uchar xdata ** p){
+                     380     
+----                 381             RSEG  ?PR?_free?OS
+0000                 382     _free:
+                     383             USING   0
+                     384                             ; SOURCE LINE # 76
+0000 8B00     F      385             MOV     p?242,R3
+0002 8A00     F      386             MOV     p?242+01H,R2
+0004 8900     F      387             MOV     p?242+02H,R1
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     7
+
+                     388     ;       lock();
+                     389                             ; SOURCE LINE # 77
+0006 120000   F      390             LCALL   lock
+                     391     ;       p_HeapManager = C_HeapManager_START;
+                     392                             ; SOURCE LINE # 78
+0009 753500          393             MOV     p_HeapManager,#00H
+000C 753680          394             MOV     p_HeapManager+01H,#080H
+000F                 395     ?C0005:
+                     396     ;       while(MEMORY_LEN(p_HeapManager)){
+                     397                             ; SOURCE LINE # 79
+000F 853682          398             MOV     DPL,p_HeapManager+01H
+0012 853583          399             MOV     DPH,p_HeapManager
+0015 E0              400             MOVX    A,@DPTR
+0016 6065            401             JZ      ?C0006
+                     402     ;               //如果和p地址相同
+                     403     ;               if(MEMORY_P_ADRESS(p_HeapManager) == p){
+                     404                             ; SOURCE LINE # 81
+0018 AB00     F      405             MOV     R3,p?242
+001A AA00     F      406             MOV     R2,p?242+01H
+001C A900     F      407             MOV     R1,p?242+02H
+001E CE              408             XCH     A,R6
+001F EA              409             MOV     A,R2
+0020 CE              410             XCH     A,R6
+0021 CF              411             XCH     A,R7
+0022 E9              412             MOV     A,R1
+0023 CF              413             XCH     A,R7
+0024 A3              414             INC     DPTR
+0025 A3              415             INC     DPTR
+0026 A3              416             INC     DPTR
+0027 E0              417             MOVX    A,@DPTR
+0028 6F              418             XRL     A,R7
+0029 7001            419             JNZ     ?C0063
+002B EE              420             MOV     A,R6
+002C                 421     ?C0063:
+002C 7042            422             JNZ     ?C0007
+                     423     ;                       //再校验地址
+                     424     ;                       //保存该单元长度
+                     425     ;                       Cache_uchar1 = MEMORY_LEN(p_HeapManager);
+                     426                             ; SOURCE LINE # 84
+002E 853682          427             MOV     DPL,p_HeapManager+01H
+0031 853583          428             MOV     DPH,p_HeapManager
+0034 E0              429             MOVX    A,@DPTR
+0035 F543            430             MOV     Cache_uchar1,A
+                     431     ;                       //保存该单元指向的起始地址
+                     432     ;                       Cache_uint1 = MEMORY_START(p_HeapManager);                      
+                     433                             ; SOURCE LINE # 86
+0037 A3              434             INC     DPTR
+0038 E0              435             MOVX    A,@DPTR
+0039 F546            436             MOV     Cache_uint1,A
+003B A3              437             INC     DPTR
+003C E0              438             MOVX    A,@DPTR
+003D F547            439             MOV     Cache_uint1+01H,A
+                     440     ;                       //获得p所指向的地址
+                     441     ;                       Cache_uint2 = (uint)*p;
+                     442                             ; SOURCE LINE # 88
+003F 120000   F      443             LCALL   ?C?ILDPTR
+0042 85F048          444             MOV     Cache_uint2,B
+0045 F549            445             MOV     Cache_uint2+01H,A
+                     446     ;                       //校验地址
+                     447     ;                       if(Cache_uint2 >= Cache_uint1 && Cache_uint1 < Cache_uint2 + Cache_
+                             uchar1){
+                     448                             ; SOURCE LINE # 90
+0047 C3              449             CLR     C
+0048 9547            450             SUBB    A,Cache_uint1+01H
+004A E548            451             MOV     A,Cache_uint2
+004C 9546            452             SUBB    A,Cache_uint1
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     8
+
+004E 4020            453             JC      ?C0007
+0050 7E00            454             MOV     R6,#00H
+0052 E549            455             MOV     A,Cache_uint2+01H
+0054 2543            456             ADD     A,Cache_uchar1
+0056 FF              457             MOV     R7,A
+0057 EE              458             MOV     A,R6
+0058 3548            459             ADDC    A,Cache_uint2
+005A FE              460             MOV     R6,A
+005B C3              461             CLR     C
+005C E547            462             MOV     A,Cache_uint1+01H
+005E 9F              463             SUBB    A,R7
+005F E546            464             MOV     A,Cache_uint1
+0061 9E              465             SUBB    A,R6
+0062 500C            466             JNC     ?C0007
+                     467     ;                               MEMORY_P_ADRESS(p_HeapManager) = 0x00;//释放该空间
+                     468                             ; SOURCE LINE # 91
+0064 853682          469             MOV     DPL,p_HeapManager+01H
+0067 853583          470             MOV     DPH,p_HeapManager
+006A A3              471             INC     DPTR
+006B A3              472             INC     DPTR
+006C A3              473             INC     DPTR
+006D E4              474             CLR     A
+006E F0              475             MOVX    @DPTR,A
+006F 22              476             RET     
+                     477     ;                               return;
+                     478     ;                       }
+                     479                             ; SOURCE LINE # 93
+                     480     ;               }
+                     481                             ; SOURCE LINE # 94
+0070                 482     ?C0007:
+                     483     ;               p_HeapManager += C_sgHeapManager_CAPACITY;
+                     484                             ; SOURCE LINE # 95
+0070 7404            485             MOV     A,#04H
+0072 2536            486             ADD     A,p_HeapManager+01H
+0074 F536            487             MOV     p_HeapManager+01H,A
+0076 E4              488             CLR     A
+0077 3535            489             ADDC    A,p_HeapManager
+0079 F535            490             MOV     p_HeapManager,A
+                     491     ;       }
+                     492                             ; SOURCE LINE # 96
+007B 8092            493             SJMP    ?C0005
+007D                 494     ?C0006:
+                     495     ;       unlock();
+                     496                             ; SOURCE LINE # 97
+007D 120000   F      497             LCALL   unlock
+                     498     ; }
+                     499                             ; SOURCE LINE # 98
+0080                 500     ?C0009:
+0080 22              501             RET     
+                     502     ; END OF _free
+                     503     
+                     504     ; 
+                     505     ; void GC(){
+                     506     
+----                 507             RSEG  ?PR?GC?OS
+0000                 508     GC:
+                     509             USING   0
+                     510                             ; SOURCE LINE # 100
+                     511     ;       lock();
+                     512                             ; SOURCE LINE # 101
+0000 120000   F      513             LCALL   lock
+                     514     ;       //寻找需回收的内存
+                     515     ;       p_HeapManager = C_HeapManager_START;
+                     516                             ; SOURCE LINE # 103
+0003 753500          517             MOV     p_HeapManager,#00H
+0006 753680          518             MOV     p_HeapManager+01H,#080H
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE     9
+
+0009                 519     ?C0010:
+                     520     ;       while(MEMORY_LEN(p_HeapManager)){
+                     521                             ; SOURCE LINE # 104
+0009 853682          522             MOV     DPL,p_HeapManager+01H
+000C 853583          523             MOV     DPH,p_HeapManager
+000F E0              524             MOVX    A,@DPTR
+0010 FF              525             MOV     R7,A
+0011 604C            526             JZ      ?C0011
+                     527     ;               if(MEMORY_P_ADRESS(p_HeapManager) == 0x00){
+                     528                             ; SOURCE LINE # 105
+0013 A3              529             INC     DPTR
+0014 A3              530             INC     DPTR
+0015 A3              531             INC     DPTR
+0016 E0              532             MOVX    A,@DPTR
+0017 7039            533             JNZ     ?C0012
+                     534     ;                       //获取该单元长度
+                     535     ;                       Cache_uchar1 = MEMORY_LEN(p_HeapManager);
+                     536                             ; SOURCE LINE # 107
+0019 8F43            537             MOV     Cache_uchar1,R7
+                     538     ;                       //获取该单元指向的起始地址
+                     539     ;                       Cache_uint1 = MEMORY_START(p_HeapManager);                      
+                     540                             ; SOURCE LINE # 109
+001B 853682          541             MOV     DPL,p_HeapManager+01H
+001E 853583          542             MOV     DPH,p_HeapManager
+0021 A3              543             INC     DPTR
+0022 E0              544             MOVX    A,@DPTR
+0023 F546            545             MOV     Cache_uint1,A
+0025 A3              546             INC     DPTR
+0026 E0              547             MOVX    A,@DPTR
+0027 F547            548             MOV     Cache_uint1+01H,A
+                     549     ;                       //修改堆管理器中单元的值
+                     550     ;                       GC_modifyHeapManagerUnits(Cache_uint1, Cache_uchar1);
+                     551                             ; SOURCE LINE # 111
+0029 AD43            552             MOV     R5,Cache_uchar1
+002B FF              553             MOV     R7,A
+002C AE46            554             MOV     R6,Cache_uint1
+002E 120000   F      555             LCALL   _GC_modifyHeapManagerUnits
+                     556     ;                       //整体移动字节
+                     557     ;                       GC_moveBytes(Cache_uint1 + Cache_uchar1, p_Heap, Cache_uchar1);
+                     558                             ; SOURCE LINE # 113
+0031 7E00            559             MOV     R6,#00H
+0033 E547            560             MOV     A,Cache_uint1+01H
+0035 2543            561             ADD     A,Cache_uchar1
+0037 FF              562             MOV     R7,A
+0038 EE              563             MOV     A,R6
+0039 3546            564             ADDC    A,Cache_uint1
+003B FE              565             MOV     R6,A
+003C AB43            566             MOV     R3,Cache_uchar1
+003E AD38            567             MOV     R5,p_Heap+01H
+0040 AC37            568             MOV     R4,p_Heap
+0042 120000   F      569             LCALL   _GC_moveBytes
+                     570     ;                       p_Heap -= Cache_uchar1;
+                     571                             ; SOURCE LINE # 114
+0045 C3              572             CLR     C
+0046 E538            573             MOV     A,p_Heap+01H
+0048 9543            574             SUBB    A,Cache_uchar1
+004A F538            575             MOV     p_Heap+01H,A
+004C E537            576             MOV     A,p_Heap
+004E 9400            577             SUBB    A,#00H
+0050 F537            578             MOV     p_Heap,A
+                     579     ;               }
+                     580                             ; SOURCE LINE # 115
+0052                 581     ?C0012:
+                     582     ;               p_HeapManager += C_sgHeapManager_CAPACITY;
+                     583                             ; SOURCE LINE # 116
+0052 7404            584             MOV     A,#04H
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    10
+
+0054 2536            585             ADD     A,p_HeapManager+01H
+0056 F536            586             MOV     p_HeapManager+01H,A
+0058 E4              587             CLR     A
+0059 3535            588             ADDC    A,p_HeapManager
+005B F535            589             MOV     p_HeapManager,A
+                     590     ;       }
+                     591                             ; SOURCE LINE # 117
+005D 80AA            592             SJMP    ?C0010
+005F                 593     ?C0011:
+                     594     ;       unlock();
+                     595                             ; SOURCE LINE # 118
+005F 020000   F      596             LJMP    unlock
+                     597     ; END OF GC
+                     598     
+                     599     ; }
+                     600     ; 
+                     601     ; //修改堆管理器中单元的值
+                     602     ; void GC_modifyHeapManagerUnits(uint address_threshold, uchar length){
+                     603     
+----                 604             RSEG  ?PR?_GC_modifyHeapManagerUnits?OS
+0000                 605     _GC_modifyHeapManagerUnits:
+                     606             USING   0
+                     607                             ; SOURCE LINE # 122
+0000 8E00     F      608             MOV     address_threshold?443,R6
+0002 8F00     F      609             MOV     address_threshold?443+01H,R7
+0004 8D00     F      610             MOV     length?444,R5
+                     611     ;       Cache_px_uchar1 = C_HeapManager_START;
+                     612                             ; SOURCE LINE # 123
+0006 754A00          613             MOV     Cache_px_uchar1,#00H
+0009 754B80          614             MOV     Cache_px_uchar1+01H,#080H
+000C                 615     ?C0014:
+                     616     ;       while(MEMORY_LEN(Cache_px_uchar1)){
+                     617                             ; SOURCE LINE # 124
+000C 854B82          618             MOV     DPL,Cache_px_uchar1+01H
+000F 854A83          619             MOV     DPH,Cache_px_uchar1
+0012 E0              620             MOVX    A,@DPTR
+0013 603F            621             JZ      ?C0017
+                     622     ;               //如果地址大于阈值
+                     623     ;               if(MEMORY_START(Cache_px_uchar1) > address_threshold){
+                     624                             ; SOURCE LINE # 126
+0015 A3              625             INC     DPTR
+0016 E0              626             MOVX    A,@DPTR
+0017 FE              627             MOV     R6,A
+0018 A3              628             INC     DPTR
+0019 E0              629             MOVX    A,@DPTR
+001A D3              630             SETB    C
+001B 9500     F      631             SUBB    A,address_threshold?443+01H
+001D EE              632             MOV     A,R6
+001E 9500     F      633             SUBB    A,address_threshold?443
+0020 4025            634             JC      ?C0016
+                     635     ;                       //地址减去指定长度
+                     636     ;                       MEMORY_START(Cache_px_uchar1) -= length;
+                     637                             ; SOURCE LINE # 128
+0022 854B82          638             MOV     DPL,Cache_px_uchar1+01H
+0025 854A83          639             MOV     DPH,Cache_px_uchar1
+0028 A3              640             INC     DPTR
+0029 C083            641             PUSH    DPH
+002B C082            642             PUSH    DPL
+002D 7E00            643             MOV     R6,#00H
+002F A3              644             INC     DPTR
+0030 E0              645             MOVX    A,@DPTR
+0031 9500     F      646             SUBB    A,length?444
+0033 FF              647             MOV     R7,A
+0034 0582            648             INC     DPL
+0036 D58202          649             DJNZ    DPL,?C0064
+0039 1583            650             DEC     DPH
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    11
+
+003B                 651     ?C0064:
+003B 1582            652             DEC     DPL
+003D E0              653             MOVX    A,@DPTR
+003E 9E              654             SUBB    A,R6
+003F D082            655             POP     DPL
+0041 D083            656             POP     DPH
+0043 F0              657             MOVX    @DPTR,A
+0044 A3              658             INC     DPTR
+0045 EF              659             MOV     A,R7
+0046 F0              660             MOVX    @DPTR,A
+                     661     ;               }
+                     662                             ; SOURCE LINE # 129
+0047                 663     ?C0016:
+                     664     ;               Cache_px_uchar1 += C_sgHeapManager_CAPACITY;
+                     665                             ; SOURCE LINE # 130
+0047 7404            666             MOV     A,#04H
+0049 254B            667             ADD     A,Cache_px_uchar1+01H
+004B F54B            668             MOV     Cache_px_uchar1+01H,A
+004D E4              669             CLR     A
+004E 354A            670             ADDC    A,Cache_px_uchar1
+0050 F54A            671             MOV     Cache_px_uchar1,A
+                     672     ;       }
+                     673                             ; SOURCE LINE # 131
+0052 80B8            674             SJMP    ?C0014
+                     675     ; }
+                     676                             ; SOURCE LINE # 132
+0054                 677     ?C0017:
+0054 22              678             RET     
+                     679     ; END OF _GC_modifyHeapManagerUnits
+                     680     
+                     681     ; 
+                     682     ; //整体移动字节
+                     683     ; void GC_moveBytes(uint start, uint end, uchar length){
+                     684     
+----                 685             RSEG  ?PR?_GC_moveBytes?OS
+0000                 686     _GC_moveBytes:
+                     687             USING   0
+                     688                             ; SOURCE LINE # 135
+0000 8C00     F      689             MOV     end?546,R4
+0002 8D00     F      690             MOV     end?546+01H,R5
+                     691     ;---- Variable 'start?545' assigned to Register 'R6/R7' ----
+                     692     ;---- Variable 'length?547' assigned to Register 'R3' ----
+                     693     ;       for(Cache_uint1 = start; Cache_uint1 < end; Cache_uint1++){
+                     694                             ; SOURCE LINE # 136
+0004 8E46            695             MOV     Cache_uint1,R6
+0006 8F47            696             MOV     Cache_uint1+01H,R7
+0008                 697     ?C0018:
+0008 C3              698             CLR     C
+0009 E547            699             MOV     A,Cache_uint1+01H
+000B 9500     F      700             SUBB    A,end?546+01H
+000D E546            701             MOV     A,Cache_uint1
+000F 9500     F      702             SUBB    A,end?546
+0011 5023            703             JNC     ?C0021
+                     704     ;               *((uchar xdata *)(Cache_uint1 - length)) = *((uchar xdata *)Cache_uint1);
+                     705                             ; SOURCE LINE # 137
+0013 854782          706             MOV     DPL,Cache_uint1+01H
+0016 854683          707             MOV     DPH,Cache_uint1
+0019 E0              708             MOVX    A,@DPTR
+001A FF              709             MOV     R7,A
+001B EB              710             MOV     A,R3
+001C FD              711             MOV     R5,A
+001D C3              712             CLR     C
+001E E547            713             MOV     A,Cache_uint1+01H
+0020 9D              714             SUBB    A,R5
+0021 FD              715             MOV     R5,A
+0022 E546            716             MOV     A,Cache_uint1
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    12
+
+0024 9400            717             SUBB    A,#00H
+0026 8D82            718             MOV     DPL,R5
+0028 F583            719             MOV     DPH,A
+002A EF              720             MOV     A,R7
+002B F0              721             MOVX    @DPTR,A
+                     722     ;       }
+                     723                             ; SOURCE LINE # 138
+002C 0547            724             INC     Cache_uint1+01H
+002E E547            725             MOV     A,Cache_uint1+01H
+0030 70D6            726             JNZ     ?C0018
+0032 0546            727             INC     Cache_uint1
+0034                 728     ?C0065:
+0034 80D2            729             SJMP    ?C0018
+                     730     ; }
+                     731                             ; SOURCE LINE # 139
+0036                 732     ?C0021:
+0036 22              733             RET     
+                     734     ; END OF _GC_moveBytes
+                     735     
+                     736     ; 
+                     737     ; uchar getDataMemoryUnit(uchar address){
+                     738     
+----                 739             RSEG  ?PR?_getDataMemoryUnit?OS
+0000                 740     _getDataMemoryUnit:
+                     741             USING   0
+                     742                             ; SOURCE LINE # 141
+                     743     ;---- Variable 'address?648' assigned to Register 'R0' ----
+0000 C8              744             XCH     A,R0
+0001 EF              745             MOV     A,R7
+0002 C8              746             XCH     A,R0
+                     747     ;       return *((uchar data *)address);
+                     748                             ; SOURCE LINE # 142
+0003 E6              749             MOV     A,@R0
+0004 FF              750             MOV     R7,A
+                     751     ; }
+                     752                             ; SOURCE LINE # 143
+0005                 753     ?C0022:
+0005 22              754             RET     
+                     755     ; END OF _getDataMemoryUnit
+                     756     
+                     757     ; 
+                     758     ; uchar getXDataMemoryUnit(uint address){
+                     759     
+----                 760             RSEG  ?PR?_getXDataMemoryUnit?OS
+0000                 761     _getXDataMemoryUnit:
+                     762             USING   0
+                     763                             ; SOURCE LINE # 145
+                     764     ;---- Variable 'address?749' assigned to Register 'DPTR' ----
+0000 8F82            765             MOV     DPL,R7
+0002 8E83            766             MOV     DPH,R6
+                     767     ;       return *((uchar xdata *)address);
+                     768                             ; SOURCE LINE # 146
+0004 E0              769             MOVX    A,@DPTR
+0005 FF              770             MOV     R7,A
+                     771     ; }
+                     772                             ; SOURCE LINE # 147
+0006                 773     ?C0023:
+0006 22              774             RET     
+                     775     ; END OF _getXDataMemoryUnit
+                     776     
+                     777     ; 
+                     778     ; void lock(){
+                     779     
+----                 780             RSEG  ?PR?lock?OS
+0000                 781     lock:
+                     782                             ; SOURCE LINE # 149
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    13
+
+                     783     ;       ET0 = 0;
+                     784                             ; SOURCE LINE # 150
+0000 C2A9            785             CLR     ET0
+                     786     ; }
+                     787                             ; SOURCE LINE # 151
+0002 22              788             RET     
+                     789     ; END OF lock
+                     790     
+                     791     ; 
+                     792     ; void unlock(){
+                     793     
+----                 794             RSEG  ?PR?unlock?OS
+0000                 795     unlock:
+                     796                             ; SOURCE LINE # 153
+                     797     ;       ET0 = 1;
+                     798                             ; SOURCE LINE # 154
+0000 D2A9            799             SETB    ET0
+                     800     ; }
+                     801                             ; SOURCE LINE # 155
+0002 22              802             RET     
+                     803     ; END OF unlock
+                     804     
+                     805     ; 
+                     806     ; void yield(){
+                     807     
+----                 808             RSEG  ?PR?yield?OS
+0000                 809     yield:
+                     810                             ; SOURCE LINE # 157
+                     811     ;       TH0 = 0xFF;
+                     812                             ; SOURCE LINE # 158
+0000 758CFF          813             MOV     TH0,#0FFH
+                     814     ;   TL0 = 0xFF;
+                     815                             ; SOURCE LINE # 159
+0003 758AFF          816             MOV     TL0,#0FFH
+                     817     ; }
+                     818                             ; SOURCE LINE # 160
+0006 22              819             RET     
+                     820     ; END OF yield
+                     821     
+                     822     ; 
+                     823     ; void OS_taskDispatch(){
+                     824     
+----                 825             RSEG  ?PR?OS_taskDispatch?OS
+0000                 826     OS_taskDispatch:
+                     827             USING   0
+                     828                             ; SOURCE LINE # 162
+                     829     ; 
+                     830     ;       //寄存器入栈保护 
+                     831     ;       for(Cache_uchar1=0x00;Cache_uchar1<0x18;Cache_uchar1++){                
+                     832                             ; SOURCE LINE # 165
+0000 E4              833             CLR     A
+0001 F543            834             MOV     Cache_uchar1,A
+0003                 835     ?C0027:
+                     836     ;               //MOV (C_TASKs_RAM_S + D_RN_TASK_IDX*C_sgTAK_RM_CT) + D_pTAK_RM_STK,A
+                     837     ;               *((uchar xdata *)(C_TASKs_RAM_START + RN_TASK_IDX*C_TASKs_RAM_CAPACITY + pT
+                             AK_RM_STK++)) = *((uchar data*)Cache_uchar1);                
+                     838                             ; SOURCE LINE # 167
+0003 A843            839             MOV     R0,Cache_uchar1
+0005 E6              840             MOV     A,@R0
+0006 FF              841             MOV     R7,A
+0007 0533            842             INC     pTAK_RM_STK+01H
+0009 E533            843             MOV     A,pTAK_RM_STK+01H
+000B AC32            844             MOV     R4,pTAK_RM_STK
+000D 7002            845             JNZ     ?C0066
+000F 0532            846             INC     pTAK_RM_STK
+0011                 847     ?C0066:
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    14
+
+0011 14              848             DEC     A
+0012 F582            849             MOV     DPL,A
+0014 8C83            850             MOV     DPH,R4
+0016 75F020          851             MOV     B,#020H
+0019 E530            852             MOV     A,RN_TASK_IDX
+001B 120000   F      853             LCALL   ?C?OFFXADD
+001E EF              854             MOV     A,R7
+001F F0              855             MOVX    @DPTR,A
+                     856     ;       }
+                     857                             ; SOURCE LINE # 168
+0020 0543            858             INC     Cache_uchar1
+0022 E543            859             MOV     A,Cache_uchar1
+0024 B418DC          860             CJNE    A,#018H,?C0027
+0027                 861     ?C0028:
+                     862     ;       
+                     863     ;       //寻找下一个任务的下标
+                     864     ;       Cache_uchar1 = RN_TASK_IDX + 1;
+                     865                             ; SOURCE LINE # 171
+0027 E530            866             MOV     A,RN_TASK_IDX
+0029 04              867             INC     A
+002A F543            868             MOV     Cache_uchar1,A
+                     869     ;       Cache_uchar2 = 0;//是否找到标志位                
+                     870                             ; SOURCE LINE # 172
+002C E4              871             CLR     A
+002D F544            872             MOV     Cache_uchar2,A
+                     873     ;       p_JCB = C_JCB_START + Cache_uchar1 * C_JCB_CAPACITY;
+                     874                             ; SOURCE LINE # 173
+002F E543            875             MOV     A,Cache_uchar1
+0031 75F008          876             MOV     B,#08H
+0034 A4              877             MUL     AB
+0035 2450            878             ADD     A,#050H
+0037 F534            879             MOV     p_JCB,A
+0039                 880     ?C0030:
+                     881     ;       while(!Cache_uchar2){
+                     882                             ; SOURCE LINE # 174
+0039 E544            883             MOV     A,Cache_uchar2
+003B 703E            884             JNZ     ?C0031
+                     885     ;               //从当前任务下标往后找
+                     886     ;               for(; p_JCB < C_JCB_START + C_MAX_TASK_COUNT * C_JCB_CAPACITY; p_JCB += C_J
+                             CB_CAPACITY){                
+                     887                             ; SOURCE LINE # 176
+003D                 888     ?C0032:
+003D E534            889             MOV     A,p_JCB
+003F C3              890             CLR     C
+0040 9470            891             SUBB    A,#070H
+0042 502C            892             JNC     ?C0033
+                     893     ;                       if(*p_JCB  == JCB_BLOCK){       
+                     894                             ; SOURCE LINE # 177
+0044 A834            895             MOV     R0,p_JCB
+0046 E6              896             MOV     A,@R0
+0047 B4011C          897             CJNE    A,#01H,?C0035
+                     898     ;                         //上一个任务变为阻塞状态
+                     899     ;                               *((uchar data*)(C_JCB_START + RN_TASK_IDX * C_JCB_CAPACITY)
+                             ) = JCB_BLOCK;
+                     900                             ; SOURCE LINE # 179
+004A E530            901             MOV     A,RN_TASK_IDX
+004C 75F008          902             MOV     B,#08H
+004F A4              903             MUL     AB
+0050 2450            904             ADD     A,#050H
+0052 F8              905             MOV     R0,A
+0053 7601            906             MOV     @R0,#01H
+                     907     ;                               //下一任务变成运行态
+                     908     ;                               RN_TASK_IDX = Cache_uchar1;
+                     909                             ; SOURCE LINE # 181
+0055 854330          910             MOV     RN_TASK_IDX,Cache_uchar1
+                     911     ;                               *(p_JCB++) = JCB_RUN;   
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    15
+
+                     912                             ; SOURCE LINE # 182
+0058 AF34            913             MOV     R7,p_JCB
+005A 0534            914             INC     p_JCB
+005C C8              915             XCH     A,R0
+005D EF              916             MOV     A,R7
+005E C8              917             XCH     A,R0
+005F 7602            918             MOV     @R0,#02H
+                     919     ;                               Cache_uchar2 = 1;//找到了
+                     920                             ; SOURCE LINE # 183
+0061 754401          921             MOV     Cache_uchar2,#01H
+                     922     ;                               break;
+                     923                             ; SOURCE LINE # 184
+0064 800A            924             SJMP    ?C0033
+                     925     ;                       }       
+                     926                             ; SOURCE LINE # 185
+0066                 927     ?C0035:
+                     928     ;                       ++Cache_uchar1;
+                     929                             ; SOURCE LINE # 186
+0066 0543            930             INC     Cache_uchar1
+                     931     ;               }
+                     932                             ; SOURCE LINE # 187
+0068 7408            933             MOV     A,#08H
+006A 2534            934             ADD     A,p_JCB
+006C F534            935             MOV     p_JCB,A
+006E 80CD            936             SJMP    ?C0032
+0070                 937     ?C0033:
+                     938     ;               //如果没找到，从头找
+                     939     ;               if(!Cache_uchar2){
+                     940                             ; SOURCE LINE # 189
+0070 E544            941             MOV     A,Cache_uchar2
+0072 70C5            942             JNZ     ?C0030
+                     943     ;                       p_JCB = C_JCB_START;
+                     944                             ; SOURCE LINE # 190
+0074 753450          945             MOV     p_JCB,#050H
+                     946     ;                       Cache_uchar1 = 0;
+                     947                             ; SOURCE LINE # 191
+0077 F543            948             MOV     Cache_uchar1,A
+                     949     ;               }
+                     950                             ; SOURCE LINE # 192
+                     951     ;       }
+                     952                             ; SOURCE LINE # 193
+0079 80BE            953             SJMP    ?C0030
+007B                 954     ?C0031:
+                     955     ;       pTAK_RM_STK = C_TASKs_RAM_START + RN_TASK_IDX * C_TASKs_RAM_CAPACITY;//任务数据
                              栈指针    
-                     275                             ; SOURCE LINE # 58
-0062 75F020          276             MOV     B,#020H
-0065 E530            277             MOV     A,RN_TASK_IDX
-0067 A4              278             MUL     AB
-0068 85F032          279             MOV     pTAK_RM_STK,B
-006B F533            280             MOV     pTAK_RM_STK+01H,A
-                     281     ;       //恢复ACC     
-                     282     ;       Cache_ACC = *(pTAK_RM_STK++);
-                     283                             ; SOURCE LINE # 60
-006D 0533            284             INC     pTAK_RM_STK+01H
-006F E533            285             MOV     A,pTAK_RM_STK+01H
-0071 AE32            286             MOV     R6,pTAK_RM_STK
-0073 7002            287             JNZ     ?C0036
-0075 0532            288             INC     pTAK_RM_STK
-0077                 289     ?C0036:
-0077 14              290             DEC     A
-0078 F582            291             MOV     DPL,A
-007A 8E83            292             MOV     DPH,R6
-007C E0              293             MOVX    A,@DPTR
-007D F540            294             MOV     Cache_ACC,A
-                     295     ;       //恢复PSW
-                     296     ;       *((uchar*)PSW) = *(pTAK_RM_STK++) & 0xE7;
-                     297                             ; SOURCE LINE # 62
-007F 0533            298             INC     pTAK_RM_STK+01H
-0081 E533            299             MOV     A,pTAK_RM_STK+01H
-0083 AE32            300             MOV     R6,pTAK_RM_STK
-0085 7002            301             JNZ     ?C0037
-0087 0532            302             INC     pTAK_RM_STK
-0089                 303     ?C0037:
-0089 14              304             DEC     A
-008A F582            305             MOV     DPL,A
-008C 8E83            306             MOV     DPH,R6
-008E E0              307             MOVX    A,@DPTR
-008F 54E7            308             ANL     A,#0E7H
-0091 A9D0            309             MOV     R1,PSW
-0093 7A00            310             MOV     R2,#00H
-0095 7B00            311             MOV     R3,#00H
-0097 120000   F      312             LCALL   ?C?CSTPTR
-                     313     ;       //获取入口地址
-                     314     ;       //先从任务RAM中获取              
-                     315     ;       Cache_TaskEnter_L = *(pTAK_RM_STK++);
-                     316                             ; SOURCE LINE # 65
-009A 0533            317             INC     pTAK_RM_STK+01H
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     6
+                     956                             ; SOURCE LINE # 194
+007B 75F020          957             MOV     B,#020H
+007E E530            958             MOV     A,RN_TASK_IDX
+0080 A4              959             MUL     AB
+0081 85F032          960             MOV     pTAK_RM_STK,B
+0084 F533            961             MOV     pTAK_RM_STK+01H,A
+                     962     ;       //恢复ACC     
+                     963     ;       Cache_ACC = *(pTAK_RM_STK++);
+                     964                             ; SOURCE LINE # 196
+0086 0533            965             INC     pTAK_RM_STK+01H
+0088 E533            966             MOV     A,pTAK_RM_STK+01H
+008A AE32            967             MOV     R6,pTAK_RM_STK
+008C 7002            968             JNZ     ?C0067
+008E 0532            969             INC     pTAK_RM_STK
+0090                 970     ?C0067:
+0090 14              971             DEC     A
+0091 F582            972             MOV     DPL,A
+0093 8E83            973             MOV     DPH,R6
+0095 E0              974             MOVX    A,@DPTR
+0096 F540            975             MOV     Cache_ACC,A
+                     976     ;       //恢复PSW
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    16
 
-009C E533            318             MOV     A,pTAK_RM_STK+01H
-009E AE32            319             MOV     R6,pTAK_RM_STK
-00A0 7002            320             JNZ     ?C0038
-00A2 0532            321             INC     pTAK_RM_STK
-00A4                 322     ?C0038:
-00A4 14              323             DEC     A
-00A5 F582            324             MOV     DPL,A
-00A7 8E83            325             MOV     DPH,R6
-00A9 E0              326             MOVX    A,@DPTR
-00AA F541            327             MOV     Cache_TaskEnter_L,A
-                     328     ;       Cache_TaskEnter_H = *(pTAK_RM_STK++);
-                     329                             ; SOURCE LINE # 66
-00AC 0533            330             INC     pTAK_RM_STK+01H
-00AE E533            331             MOV     A,pTAK_RM_STK+01H
-00B0 AE32            332             MOV     R6,pTAK_RM_STK
-00B2 7002            333             JNZ     ?C0039
-00B4 0532            334             INC     pTAK_RM_STK
-00B6                 335     ?C0039:
-00B6 14              336             DEC     A
-00B7 F582            337             MOV     DPL,A
-00B9 8E83            338             MOV     DPH,R6
-00BB E0              339             MOVX    A,@DPTR
-00BC F542            340             MOV     Cache_TaskEnter_H,A
-                     341     ;       if(Cache_TaskEnter_L == 0x00 && Cache_TaskEnter_H == 0x00){
-                     342                             ; SOURCE LINE # 67
-00BE E541            343             MOV     A,Cache_TaskEnter_L
-00C0 7016            344             JNZ     ?C0009
-00C2 E542            345             MOV     A,Cache_TaskEnter_H
-00C4 7012            346             JNZ     ?C0009
-                     347     ;               //如果任务数据栈为空，则从JCB获取         
-                     348     ;               Cache_TaskEnter_L = *(p_JCB++);
-                     349                             ; SOURCE LINE # 69
-00C6 AF34            350             MOV     R7,p_JCB
-00C8 0534            351             INC     p_JCB
-00CA A807            352             MOV     R0,AR7
-00CC E6              353             MOV     A,@R0
-00CD F541            354             MOV     Cache_TaskEnter_L,A
-                     355     ;               Cache_TaskEnter_H = *(p_JCB++);         
-                     356                             ; SOURCE LINE # 70
-00CF AF34            357             MOV     R7,p_JCB
-00D1 0534            358             INC     p_JCB
-00D3 A807            359             MOV     R0,AR7
-00D5 E6              360             MOV     A,@R0
-00D6 F542            361             MOV     Cache_TaskEnter_H,A
-                     362     ;       }       
-                     363                             ; SOURCE LINE # 71
-00D8                 364     ?C0009:
-                     365     ;       //切换任务栈的起始地址
-                     366     ;       //先从任务数据栈中获取
-                     367     ;       SP = *(pTAK_RM_STK++);
-                     368                             ; SOURCE LINE # 74
-00D8 0533            369             INC     pTAK_RM_STK+01H
-00DA E533            370             MOV     A,pTAK_RM_STK+01H
-00DC AE32            371             MOV     R6,pTAK_RM_STK
-00DE 7002            372             JNZ     ?C0040
-00E0 0532            373             INC     pTAK_RM_STK
-00E2                 374     ?C0040:
-00E2 14              375             DEC     A
-00E3 F582            376             MOV     DPL,A
-00E5 8E83            377             MOV     DPH,R6
-00E7 E0              378             MOVX    A,@DPTR
-00E8 F581            379             MOV     SP,A
-                     380     ;       if(SP == 0){
-                     381                             ; SOURCE LINE # 75
-00EA E581            382             MOV     A,SP
-00EC 700A            383             JNZ     ?C0010
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     7
+                     977     ;       *((uchar*)PSW) = *(pTAK_RM_STK++) & 0xE7;
+                     978                             ; SOURCE LINE # 198
+0098 0533            979             INC     pTAK_RM_STK+01H
+009A E533            980             MOV     A,pTAK_RM_STK+01H
+009C AE32            981             MOV     R6,pTAK_RM_STK
+009E 7002            982             JNZ     ?C0068
+00A0 0532            983             INC     pTAK_RM_STK
+00A2                 984     ?C0068:
+00A2 14              985             DEC     A
+00A3 F582            986             MOV     DPL,A
+00A5 8E83            987             MOV     DPH,R6
+00A7 E0              988             MOVX    A,@DPTR
+00A8 54E7            989             ANL     A,#0E7H
+00AA A9D0            990             MOV     R1,PSW
+00AC 7A00            991             MOV     R2,#00H
+00AE 7B00            992             MOV     R3,#00H
+00B0 120000   F      993             LCALL   ?C?CSTPTR
+                     994     ;       //获取入口地址
+                     995     ;       //先从任务RAM中获取              
+                     996     ;       Cache_TaskEnter_L = *(pTAK_RM_STK++);
+                     997                             ; SOURCE LINE # 201
+00B3 0533            998             INC     pTAK_RM_STK+01H
+00B5 E533            999             MOV     A,pTAK_RM_STK+01H
+00B7 AE32           1000             MOV     R6,pTAK_RM_STK
+00B9 7002           1001             JNZ     ?C0069
+00BB 0532           1002             INC     pTAK_RM_STK
+00BD                1003     ?C0069:
+00BD 14             1004             DEC     A
+00BE F582           1005             MOV     DPL,A
+00C0 8E83           1006             MOV     DPH,R6
+00C2 E0             1007             MOVX    A,@DPTR
+00C3 F541           1008             MOV     Cache_TaskEnter_L,A
+                    1009     ;       Cache_TaskEnter_H = *(pTAK_RM_STK++);
+                    1010                             ; SOURCE LINE # 202
+00C5 0533           1011             INC     pTAK_RM_STK+01H
+00C7 E533           1012             MOV     A,pTAK_RM_STK+01H
+00C9 AE32           1013             MOV     R6,pTAK_RM_STK
+00CB 7002           1014             JNZ     ?C0070
+00CD 0532           1015             INC     pTAK_RM_STK
+00CF                1016     ?C0070:
+00CF 14             1017             DEC     A
+00D0 F582           1018             MOV     DPL,A
+00D2 8E83           1019             MOV     DPH,R6
+00D4 E0             1020             MOVX    A,@DPTR
+00D5 F542           1021             MOV     Cache_TaskEnter_H,A
+                    1022     ;       if(Cache_TaskEnter_L == 0x00 && Cache_TaskEnter_H == 0x00){
+                    1023                             ; SOURCE LINE # 203
+00D7 E541           1024             MOV     A,Cache_TaskEnter_L
+00D9 7018           1025             JNZ     ?C0037
+00DB E542           1026             MOV     A,Cache_TaskEnter_H
+00DD 7014           1027             JNZ     ?C0037
+                    1028     ;               //如果任务数据栈为空，则从JCB获取         
+                    1029     ;               Cache_TaskEnter_L = *(p_JCB++);
+                    1030                             ; SOURCE LINE # 205
+00DF AF34           1031             MOV     R7,p_JCB
+00E1 0534           1032             INC     p_JCB
+00E3 C8             1033             XCH     A,R0
+00E4 EF             1034             MOV     A,R7
+00E5 C8             1035             XCH     A,R0
+00E6 E6             1036             MOV     A,@R0
+00E7 F541           1037             MOV     Cache_TaskEnter_L,A
+                    1038     ;               Cache_TaskEnter_H = *(p_JCB++);         
+                    1039                             ; SOURCE LINE # 206
+00E9 AF34           1040             MOV     R7,p_JCB
+00EB 0534           1041             INC     p_JCB
+00ED C8             1042             XCH     A,R0
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    17
 
-                     384     ;               //如果任务数据栈为空，则设置为初始任务栈地址
-                     385     ;               SP = C_sgTASK_SP_SRART + RN_TASK_IDX * C_sgTASK_SP_CAPACITY;
-                     386                             ; SOURCE LINE # 77
-00EE E530            387             MOV     A,RN_TASK_IDX
-00F0 C4              388             SWAP    A
-00F1 33              389             RLC     A
-00F2 54E0            390             ANL     A,#0E0H
-00F4 2480            391             ADD     A,#080H
-00F6 F581            392             MOV     SP,A
-                     393     ;       }
-                     394                             ; SOURCE LINE # 78
-00F8                 395     ?C0010:
-                     396     ;       //恢复寄存器数据
-                     397     ;       for(i=0x08;i<0x10;i++){                 
-                     398                             ; SOURCE LINE # 80
-00F8 754308          399             MOV     i,#08H
-00FB                 400     ?C0011:
-                     401     ;               *((uchar data*)i) = *(pTAK_RM_STK++);
-                     402                             ; SOURCE LINE # 81
-00FB 0533            403             INC     pTAK_RM_STK+01H
-00FD E533            404             MOV     A,pTAK_RM_STK+01H
-00FF AE32            405             MOV     R6,pTAK_RM_STK
-0101 7002            406             JNZ     ?C0041
-0103 0532            407             INC     pTAK_RM_STK
-0105                 408     ?C0041:
-0105 14              409             DEC     A
-0106 F582            410             MOV     DPL,A
-0108 8E83            411             MOV     DPH,R6
-010A E0              412             MOVX    A,@DPTR
-010B A843            413             MOV     R0,i
-010D F6              414             MOV     @R0,A
-                     415     ;       }
-                     416                             ; SOURCE LINE # 82
-010E 0543            417             INC     i
-0110 E543            418             MOV     A,i
-0112 B410E6          419             CJNE    A,#010H,?C0011
-0115                 420     ?C0012:
-                     421     ; 
-                     422     ;       //跳转
-                     423     ;       #pragma asm             
-                     424     ;       MOV A,Cache_TaskEnter_L
-0115 E541            425               MOV A,Cache_TaskEnter_L
-                     426     ;       PUSH ACC
-0117 C0E0            427               PUSH ACC
-                     428     ;       MOV A,Cache_TaskEnter_H
-0119 E542            429               MOV A,Cache_TaskEnter_H
-                     430     ;       PUSH ACC
-011B C0E0            431               PUSH ACC
-                     432     ;       MOV A,17H       
-011D E517            433               MOV A,17H     
-                     434     ;       SETB RS0;切换寄存器组到第1区   
-011F D2D3            435               SETB RS0;切换寄存器组到第1区 
-                     436     ;       RET
-0121 22              437               RET
-0122                 438     ?C0014:
-                     439     ;       #pragma endasm  
-                     440     ;       while(1);
-                     441                             ; SOURCE LINE # 94
-0122 80FE            442             SJMP    ?C0014
-                     443     ; END OF OS_taskDispatch
-                     444     
-                     445     ; }
-                     446     ; 
-                     447     ; void OS_TaskRecover(){                
-                     448     
-----                 449             RSEG  ?PR?OS_TaskRecover?OS
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     8
+00EE EF             1043             MOV     A,R7
+00EF C8             1044             XCH     A,R0
+00F0 E6             1045             MOV     A,@R0
+00F1 F542           1046             MOV     Cache_TaskEnter_H,A
+                    1047     ;       }       
+                    1048                             ; SOURCE LINE # 207
+00F3                1049     ?C0037:
+                    1050     ;       //切换任务栈的起始地址
+                    1051     ;       //先从任务数据栈中获取
+                    1052     ;       SP = *(pTAK_RM_STK++);
+                    1053                             ; SOURCE LINE # 210
+00F3 0533           1054             INC     pTAK_RM_STK+01H
+00F5 E533           1055             MOV     A,pTAK_RM_STK+01H
+00F7 AE32           1056             MOV     R6,pTAK_RM_STK
+00F9 7002           1057             JNZ     ?C0071
+00FB 0532           1058             INC     pTAK_RM_STK
+00FD                1059     ?C0071:
+00FD 14             1060             DEC     A
+00FE F582           1061             MOV     DPL,A
+0100 8E83           1062             MOV     DPH,R6
+0102 E0             1063             MOVX    A,@DPTR
+0103 F581           1064             MOV     SP,A
+                    1065     ;       if(SP == 0){
+                    1066                             ; SOURCE LINE # 211
+0105 E581           1067             MOV     A,SP
+0107 700A           1068             JNZ     ?C0038
+                    1069     ;               //如果任务数据栈为空，则设置为初始任务栈地址
+                    1070     ;               SP = C_sgTASK_SP_SRART + RN_TASK_IDX * C_sgTASK_SP_CAPACITY;
+                    1071                             ; SOURCE LINE # 213
+0109 E530           1072             MOV     A,RN_TASK_IDX
+010B C4             1073             SWAP    A
+010C 33             1074             RLC     A
+010D 54E0           1075             ANL     A,#0E0H
+010F 2480           1076             ADD     A,#080H
+0111 F581           1077             MOV     SP,A
+                    1078     ;       }
+                    1079                             ; SOURCE LINE # 214
+0113                1080     ?C0038:
+                    1081     ;       //恢复寄存器数据
+                    1082     ;       for(Cache_uchar1=0x00;Cache_uchar1<0x18;Cache_uchar1++){                        
+                    1083                             ; SOURCE LINE # 216
+0113 E4             1084             CLR     A
+0114 F543           1085             MOV     Cache_uchar1,A
+0116                1086     ?C0039:
+                    1087     ;               *((uchar data*)Cache_uchar1) = *(pTAK_RM_STK++);
+                    1088                             ; SOURCE LINE # 217
+0116 0533           1089             INC     pTAK_RM_STK+01H
+0118 E533           1090             MOV     A,pTAK_RM_STK+01H
+011A AE32           1091             MOV     R6,pTAK_RM_STK
+011C 7002           1092             JNZ     ?C0072
+011E 0532           1093             INC     pTAK_RM_STK
+0120                1094     ?C0072:
+0120 14             1095             DEC     A
+0121 F582           1096             MOV     DPL,A
+0123 8E83           1097             MOV     DPH,R6
+0125 E0             1098             MOVX    A,@DPTR
+0126 A843           1099             MOV     R0,Cache_uchar1
+0128 F6             1100             MOV     @R0,A
+                    1101     ;       }
+                    1102                             ; SOURCE LINE # 218
+0129 0543           1103             INC     Cache_uchar1
+012B E543           1104             MOV     A,Cache_uchar1
+012D B418E6         1105             CJNE    A,#018H,?C0039
+0130                1106     ?C0040:
+                    1107     ; 
+                    1108     ;       //跳转
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    18
 
-0000                 450     OS_TaskRecover:
-                     451             USING   0
-                     452                             ; SOURCE LINE # 97
-                     453     ;       //设置JCB     
-                     454     ;       p_JCB = C_JCB_START + RN_TASK_IDX * C_JCB_CAPACITY;//任务地址栈指针
-                     455                             ; SOURCE LINE # 99
-0000 E530            456             MOV     A,RN_TASK_IDX
-0002 75F008          457             MOV     B,#08H
-0005 A4              458             MUL     AB
-0006 2450            459             ADD     A,#050H
-0008 F534            460             MOV     p_JCB,A
-                     461     ;       *p_JCB = JCB_DESTORY;   
-                     462                             ; SOURCE LINE # 100
-000A F8              463             MOV     R0,A
-000B E4              464             CLR     A
-000C F6              465             MOV     @R0,A
-000D                 466     ?C0017:
-                     467     ;       while(1);
-                     468                             ; SOURCE LINE # 101
-000D 80FE            469             SJMP    ?C0017
-                     470     ; END OF OS_TaskRecover
-                     471     
-                     472     ; }
-                     473     ; 
-                     474     ; void sleep(uchar ms)   
-                     475     
-----                 476             RSEG  ?PR?_sleep?OS
-0000                 477     _sleep:
-                     478             USING   0
-                     479                             ; SOURCE LINE # 104
-                     480     ;---- Variable 'ms?340' assigned to Register 'R7' ----
-                     481     ; {
-                     482                             ; SOURCE LINE # 105
-                     483     ;       unsigned char a,b,c;
-                     484     ;     for(c=ms;c>0;c--)
-                     485                             ; SOURCE LINE # 107
-                     486     ;---- Variable 'c?343' assigned to Register 'R7' ----
-0000                 487     ?C0020:
-0000 EF              488             MOV     A,R7
-0001 D3              489             SETB    C
-0002 9400            490             SUBB    A,#00H
-0004 400B            491             JC      ?C0029
-                     492     ;       for(b=142;b>0;b--)
-                     493                             ; SOURCE LINE # 108
-                     494     ;---- Variable 'b?342' assigned to Register 'R6' ----
-0006 7E8E            495             MOV     R6,#08EH
-0008                 496     ?C0023:
-                     497     ;         for(a=2;a>0;a--);
-                     498                             ; SOURCE LINE # 109
-                     499     ;---- Variable 'a?341' assigned to Register 'R5' ----
-0008 7D02            500             MOV     R5,#02H
-000A                 501     ?C0026:
-000A DDFE            502             DJNZ    R5,?C0026
-000C                 503     ?C0025:
-000C DEFA            504             DJNZ    R6,?C0023
-000E                 505     ?C0022:
-000E 1F              506             DEC     R7
-000F 80EF            507             SJMP    ?C0020
-                     508     ; }
-                     509                             ; SOURCE LINE # 110
-0011                 510     ?C0029:
-0011 22              511             RET     
-                     512     ; END OF _sleep
-                     513     
-                     514     ; 
-                     515     ; void addTask(uint task){              
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE     9
+                    1109     ;       #pragma asm             
+                    1110     ;       MOV A,Cache_TaskEnter_L
+0130 E541           1111               MOV A,Cache_TaskEnter_L
+                    1112     ;       PUSH ACC
+0132 C0E0           1113               PUSH ACC
+                    1114     ;       MOV A,Cache_TaskEnter_H
+0134 E542           1115               MOV A,Cache_TaskEnter_H
+                    1116     ;       PUSH ACC
+0136 C0E0           1117               PUSH ACC
+                    1118     ;       MOV A,17H       
+0138 E517           1119               MOV A,17H     
+                    1120     ;       ;切换寄存器组到第0区
+                    1121               ;切换寄存器组到第0区
+                    1122     ;       CLR RS0
+013A C2D3           1123               CLR RS0
+                    1124     ;       CLR RS1
+013C C2D4           1125               CLR RS1
+                    1126     ;       RET
+013E 22             1127               RET
+013F                1128     ?C0042:
+                    1129     ;       #pragma endasm  
+                    1130     ;       while(1);
+                    1131                             ; SOURCE LINE # 232
+013F 80FE           1132             SJMP    ?C0042
+                    1133     ; END OF OS_taskDispatch
+                    1134     
+                    1135     ; }
+                    1136     ; 
+                    1137     ; void OS_TaskRecover(){                
+                    1138     
+----                1139             RSEG  ?PR?OS_TaskRecover?OS
+0000                1140     OS_TaskRecover:
+                    1141             USING   0
+                    1142                             ; SOURCE LINE # 235
+                    1143     ;       //设置JCB     
+                    1144     ;       p_JCB = C_JCB_START + RN_TASK_IDX * C_JCB_CAPACITY;//任务地址栈指针
+                    1145                             ; SOURCE LINE # 237
+0000 E530           1146             MOV     A,RN_TASK_IDX
+0002 75F008         1147             MOV     B,#08H
+0005 A4             1148             MUL     AB
+0006 2450           1149             ADD     A,#050H
+0008 F534           1150             MOV     p_JCB,A
+                    1151     ;       *p_JCB = JCB_DESTORY;   
+                    1152                             ; SOURCE LINE # 238
+000A F8             1153             MOV     R0,A
+000B E4             1154             CLR     A
+000C F6             1155             MOV     @R0,A
+000D                1156     ?C0045:
+                    1157     ;       while(1);
+                    1158                             ; SOURCE LINE # 239
+000D 80FE           1159             SJMP    ?C0045
+                    1160     ; END OF OS_TaskRecover
+                    1161     
+                    1162     ; }
+                    1163     ; 
+                    1164     ; void sleep(uchar ms)   
+                    1165     
+----                1166             RSEG  ?PR?_sleep?OS
+0000                1167     _sleep:
+                    1168             USING   0
+                    1169                             ; SOURCE LINE # 242
+                    1170     ;---- Variable 'ms?1350' assigned to Register 'R7' ----
+                    1171     ; {
+                    1172                             ; SOURCE LINE # 243
+                    1173     ;       unsigned char a,b,c;
+                    1174     ;     for(c=ms;c>0;c--)
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    19
 
-                     516     
-----                 517             RSEG  ?PR?_addTask?OS
-0000                 518     _addTask:
-                     519             USING   0
-                     520                             ; SOURCE LINE # 112
-                     521     ;---- Variable 'task?444' assigned to Register 'R6/R7' ----
-                     522     ;       for(p_JCB = C_JCB_START; p_JCB < C_JCB_START + C_MAX_TASK_COUNT * C_JCB_CAPACITY; p
+                    1175                             ; SOURCE LINE # 245
+                    1176     ;---- Variable 'c?1353' assigned to Register 'R7' ----
+0000                1177     ?C0048:
+0000 EF             1178             MOV     A,R7
+0001 D3             1179             SETB    C
+0002 9400           1180             SUBB    A,#00H
+0004 400B           1181             JC      ?C0057
+                    1182     ;       for(b=142;b>0;b--)
+                    1183                             ; SOURCE LINE # 246
+                    1184     ;---- Variable 'b?1352' assigned to Register 'R6' ----
+0006 7E8E           1185             MOV     R6,#08EH
+0008                1186     ?C0051:
+                    1187     ;         for(a=2;a>0;a--);
+                    1188                             ; SOURCE LINE # 247
+                    1189     ;---- Variable 'a?1351' assigned to Register 'R5' ----
+0008 7D02           1190             MOV     R5,#02H
+000A                1191     ?C0054:
+000A DDFE           1192             DJNZ    R5,?C0054
+000C                1193     ?C0053:
+000C DEFA           1194             DJNZ    R6,?C0051
+000E                1195     ?C0050:
+000E 1F             1196             DEC     R7
+000F 80EF           1197             SJMP    ?C0048
+                    1198     ; }
+                    1199                             ; SOURCE LINE # 248
+0011                1200     ?C0057:
+0011 22             1201             RET     
+                    1202     ; END OF _sleep
+                    1203     
+                    1204     ; 
+                    1205     ; void addTask(uint task){              
+                    1206     
+----                1207             RSEG  ?PR?_addTask?OS
+0000                1208     _addTask:
+                    1209             USING   0
+                    1210                             ; SOURCE LINE # 250
+                    1211     ;---- Variable 'task?1454' assigned to Register 'R6/R7' ----
+                    1212     ;       for(p_JCB = C_JCB_START; p_JCB < C_JCB_START + C_MAX_TASK_COUNT * C_JCB_CAPACITY; p
                              _JCB += C_JCB_CAPACITY){
-                     523                             ; SOURCE LINE # 113
-0000 753450          524             MOV     p_JCB,#050H
-0003                 525     ?C0030:
-0003 E534            526             MOV     A,p_JCB
-0005 C3              527             CLR     C
-0006 9470            528             SUBB    A,#070H
-0008 502A            529             JNC     ?C0034
-                     530     ;               if(*p_JCB == JCB_DESTORY){
-                     531                             ; SOURCE LINE # 114
-000A A834            532             MOV     R0,p_JCB
-000C E6              533             MOV     A,@R0
-000D 701D            534             JNZ     ?C0032
-                     535     ;                       *(p_JCB++) = JCB_BLOCK;
-                     536                             ; SOURCE LINE # 115
-000F AD34            537             MOV     R5,p_JCB
-0011 0534            538             INC     p_JCB
-0013 A805            539             MOV     R0,AR5
-0015 7601            540             MOV     @R0,#01H
-                     541     ;                       *(p_JCB++) = task;
-                     542                             ; SOURCE LINE # 116
-0017 AD07            543             MOV     R5,AR7
-0019 AC34            544             MOV     R4,p_JCB
-001B 0534            545             INC     p_JCB
-001D A804            546             MOV     R0,AR4
-001F A605            547             MOV     @R0,AR5
-                     548     ;                       *(p_JCB++) = task >> 8;
-                     549                             ; SOURCE LINE # 117
-0021 AF06            550             MOV     R7,AR6
-0023 AE34            551             MOV     R6,p_JCB
-0025 0534            552             INC     p_JCB
-0027 A806            553             MOV     R0,AR6
-0029 A607            554             MOV     @R0,AR7
-                     555     ;                       break;
-                     556                             ; SOURCE LINE # 118
-002B 22              557             RET     
-                     558     ;               }
-                     559                             ; SOURCE LINE # 119
-                     560     ;       }               
-                     561                             ; SOURCE LINE # 120
-002C                 562     ?C0032:
-002C 7408            563             MOV     A,#08H
-002E 2534            564             ADD     A,p_JCB
-0030 F534            565             MOV     p_JCB,A
-0032 80CF            566             SJMP    ?C0030
-                     567     ; }                     ; SOURCE LINE # 121
-0034                 568     ?C0034:
-0034 22              569             RET     
-                     570     ; END OF _addTask
-                     571     
-                     572             END
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE    10
+                    1213                             ; SOURCE LINE # 251
+0000 753450         1214             MOV     p_JCB,#050H
+0003                1215     ?C0058:
+0003 E534           1216             MOV     A,p_JCB
+0005 C3             1217             CLR     C
+0006 9470           1218             SUBB    A,#070H
+0008 5031           1219             JNC     ?C0062
+                    1220     ;               if(*p_JCB == JCB_DESTORY){
+                    1221                             ; SOURCE LINE # 252
+000A A834           1222             MOV     R0,p_JCB
+000C E6             1223             MOV     A,@R0
+000D 7024           1224             JNZ     ?C0060
+                    1225     ;                       *(p_JCB++) = JCB_BLOCK;
+                    1226                             ; SOURCE LINE # 253
+000F AD34           1227             MOV     R5,p_JCB
+0011 0534           1228             INC     p_JCB
+0013 C8             1229             XCH     A,R0
+0014 ED             1230             MOV     A,R5
+0015 C8             1231             XCH     A,R0
+0016 7601           1232             MOV     @R0,#01H
+                    1233     ;                       *(p_JCB++) = task;
+                    1234                             ; SOURCE LINE # 254
+0018 CD             1235             XCH     A,R5
+0019 EF             1236             MOV     A,R7
+001A CD             1237             XCH     A,R5
+001B AC34           1238             MOV     R4,p_JCB
+001D 0534           1239             INC     p_JCB
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    20
+
+001F C8             1240             XCH     A,R0
+0020 EC             1241             MOV     A,R4
+0021 C8             1242             XCH     A,R0
+0022 C6             1243             XCH     A,@R0
+0023 ED             1244             MOV     A,R5
+0024 C6             1245             XCH     A,@R0
+                    1246     ;                       *(p_JCB++) = task >> 8;
+                    1247                             ; SOURCE LINE # 255
+0025 CF             1248             XCH     A,R7
+0026 EE             1249             MOV     A,R6
+0027 CF             1250             XCH     A,R7
+0028 AE34           1251             MOV     R6,p_JCB
+002A 0534           1252             INC     p_JCB
+002C C8             1253             XCH     A,R0
+002D EE             1254             MOV     A,R6
+002E C8             1255             XCH     A,R0
+002F C6             1256             XCH     A,@R0
+0030 EF             1257             MOV     A,R7
+0031 C6             1258             XCH     A,@R0
+                    1259     ;                       break;
+                    1260                             ; SOURCE LINE # 256
+0032 22             1261             RET     
+                    1262     ;               }
+                    1263                             ; SOURCE LINE # 257
+                    1264     ;       }               
+                    1265                             ; SOURCE LINE # 258
+0033                1266     ?C0060:
+0033 7408           1267             MOV     A,#08H
+0035 2534           1268             ADD     A,p_JCB
+0037 F534           1269             MOV     p_JCB,A
+0039 80C8           1270             SJMP    ?C0058
+                    1271     ; }                     ; SOURCE LINE # 259
+003B                1272     ?C0062:
+003B 22             1273             RET     
+                    1274     ; END OF _addTask
+                    1275     
+                    1276             END
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    21
 
 SYMBOL TABLE LISTING
 ------ ----- -------
 
 
-N A M E                 T Y P E  V A L U E   ATTRIBUTES
+N A M E                            T Y P E  V A L U E   ATTRIBUTES
 
-?C0002 . . . . . . . .  C ADDR   0003H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0003 . . . . . . . .  C ADDR   0027H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0005 . . . . . . . .  C ADDR   002DH   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0006 . . . . . . . .  C ADDR   0062H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0008 . . . . . . . .  C ADDR   0058H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0009 . . . . . . . .  C ADDR   00D8H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0010 . . . . . . . .  C ADDR   00F8H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0011 . . . . . . . .  C ADDR   00FBH   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0012 . . . . . . . .  C ADDR   0115H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0014 . . . . . . . .  C ADDR   0122H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0017 . . . . . . . .  C ADDR   000DH   R   SEG=?PR?OS_TASKRECOVER?OS
-?C0020 . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_SLEEP?OS
-?C0022 . . . . . . . .  C ADDR   000EH   R   SEG=?PR?_SLEEP?OS
-?C0023 . . . . . . . .  C ADDR   0008H   R   SEG=?PR?_SLEEP?OS
-?C0025 . . . . . . . .  C ADDR   000CH   R   SEG=?PR?_SLEEP?OS
-?C0026 . . . . . . . .  C ADDR   000AH   R   SEG=?PR?_SLEEP?OS
-?C0029 . . . . . . . .  C ADDR   0011H   R   SEG=?PR?_SLEEP?OS
-?C0030 . . . . . . . .  C ADDR   0003H   R   SEG=?PR?_ADDTASK?OS
-?C0032 . . . . . . . .  C ADDR   002CH   R   SEG=?PR?_ADDTASK?OS
-?C0034 . . . . . . . .  C ADDR   0034H   R   SEG=?PR?_ADDTASK?OS
-?C0035 . . . . . . . .  C ADDR   0011H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0036 . . . . . . . .  C ADDR   0077H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0037 . . . . . . . .  C ADDR   0089H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0038 . . . . . . . .  C ADDR   00A4H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0039 . . . . . . . .  C ADDR   00B6H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0040 . . . . . . . .  C ADDR   00E2H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C0041 . . . . . . . .  C ADDR   0105H   R   SEG=?PR?OS_TASKDISPATCH?OS
-?C?CSTPTR. . . . . . .  C ADDR   -----       EXT
-?C?OFFXADD . . . . . .  C ADDR   -----       EXT
-?PR?OS_MAIN?OS . . . .  C SEG    0003H       REL=UNIT
-?PR?OS_TASKDISPATCH?OS  C SEG    0124H       REL=UNIT
-?PR?OS_TASKRECOVER?OS.  C SEG    000FH       REL=UNIT
-?PR?_ADDTASK?OS. . . .  C SEG    0035H       REL=UNIT
-?PR?_SLEEP?OS. . . . .  C SEG    0012H       REL=UNIT
-AC . . . . . . . . . .  B ADDR   00D0H.6 A   
-ACC. . . . . . . . . .  D ADDR   00E0H   A   
-ADDTASKS . . . . . . .  C ADDR   -----       EXT
-AR4. . . . . . . . . .  D ADDR   0004H   A   
-AR5. . . . . . . . . .  D ADDR   0005H   A   
-AR6. . . . . . . . . .  D ADDR   0006H   A   
-AR7. . . . . . . . . .  D ADDR   0007H   A   
-B. . . . . . . . . . .  D ADDR   00F0H   A   
-CACHE_ACC. . . . . . .  D ADDR   0040H   A   
-CACHE_TASKENTER_H. . .  D ADDR   0042H   A   
-CACHE_TASKENTER_L. . .  D ADDR   0041H   A   
-CP_RL2 . . . . . . . .  B ADDR   00C8H.0 A   
-CY . . . . . . . . . .  B ADDR   00D0H.7 A   
-C_T2 . . . . . . . . .  B ADDR   00C8H.1 A   
-DPH. . . . . . . . . .  D ADDR   0083H   A   
-DPL. . . . . . . . . .  D ADDR   0082H   A   
-EA . . . . . . . . . .  B ADDR   00A8H.7 A   
-ES . . . . . . . . . .  B ADDR   00A8H.4 A   
-ET0. . . . . . . . . .  B ADDR   00A8H.1 A   
-ET1. . . . . . . . . .  B ADDR   00A8H.3 A   
-ET2. . . . . . . . . .  B ADDR   00A8H.5 A   
-EX0. . . . . . . . . .  B ADDR   00A8H.0 A   
-EX1. . . . . . . . . .  B ADDR   00A8H.2 A   
-EXEN2. . . . . . . . .  B ADDR   00C8H.3 A   
-EXF2 . . . . . . . . .  B ADDR   00C8H.6 A   
-F0 . . . . . . . . . .  B ADDR   00D0H.5 A   
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE    11
+?C0002. . . . . . . . . . . . . .  C ADDR   0011H   R   SEG=?PR?_MALLOC?OS
+?C0003. . . . . . . . . . . . . .  C ADDR   002AH   R   SEG=?PR?_MALLOC?OS
+?C0005. . . . . . . . . . . . . .  C ADDR   000FH   R   SEG=?PR?_FREE?OS
+?C0006. . . . . . . . . . . . . .  C ADDR   007DH   R   SEG=?PR?_FREE?OS
+?C0007. . . . . . . . . . . . . .  C ADDR   0070H   R   SEG=?PR?_FREE?OS
+?C0009. . . . . . . . . . . . . .  C ADDR   0080H   R   SEG=?PR?_FREE?OS
+?C0010. . . . . . . . . . . . . .  C ADDR   0009H   R   SEG=?PR?GC?OS
+?C0011. . . . . . . . . . . . . .  C ADDR   005FH   R   SEG=?PR?GC?OS
+?C0012. . . . . . . . . . . . . .  C ADDR   0052H   R   SEG=?PR?GC?OS
+?C0014. . . . . . . . . . . . . .  C ADDR   000CH   R   SEG=?PR?_GC_MODIFYHEAPMANAGERUNITS?OS
+?C0016. . . . . . . . . . . . . .  C ADDR   0047H   R   SEG=?PR?_GC_MODIFYHEAPMANAGERUNITS?OS
+?C0017. . . . . . . . . . . . . .  C ADDR   0054H   R   SEG=?PR?_GC_MODIFYHEAPMANAGERUNITS?OS
+?C0018. . . . . . . . . . . . . .  C ADDR   0008H   R   SEG=?PR?_GC_MOVEBYTES?OS
+?C0021. . . . . . . . . . . . . .  C ADDR   0036H   R   SEG=?PR?_GC_MOVEBYTES?OS
+?C0022. . . . . . . . . . . . . .  C ADDR   0005H   R   SEG=?PR?_GETDATAMEMORYUNIT?OS
+?C0023. . . . . . . . . . . . . .  C ADDR   0006H   R   SEG=?PR?_GETXDATAMEMORYUNIT?OS
+?C0027. . . . . . . . . . . . . .  C ADDR   0003H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0028. . . . . . . . . . . . . .  C ADDR   0027H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0030. . . . . . . . . . . . . .  C ADDR   0039H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0031. . . . . . . . . . . . . .  C ADDR   007BH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0032. . . . . . . . . . . . . .  C ADDR   003DH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0033. . . . . . . . . . . . . .  C ADDR   0070H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0035. . . . . . . . . . . . . .  C ADDR   0066H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0037. . . . . . . . . . . . . .  C ADDR   00F3H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0038. . . . . . . . . . . . . .  C ADDR   0113H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0039. . . . . . . . . . . . . .  C ADDR   0116H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0040. . . . . . . . . . . . . .  C ADDR   0130H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0042. . . . . . . . . . . . . .  C ADDR   013FH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0045. . . . . . . . . . . . . .  C ADDR   000DH   R   SEG=?PR?OS_TASKRECOVER?OS
+?C0048. . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_SLEEP?OS
+?C0050. . . . . . . . . . . . . .  C ADDR   000EH   R   SEG=?PR?_SLEEP?OS
+?C0051. . . . . . . . . . . . . .  C ADDR   0008H   R   SEG=?PR?_SLEEP?OS
+?C0053. . . . . . . . . . . . . .  C ADDR   000CH   R   SEG=?PR?_SLEEP?OS
+?C0054. . . . . . . . . . . . . .  C ADDR   000AH   R   SEG=?PR?_SLEEP?OS
+?C0057. . . . . . . . . . . . . .  C ADDR   0011H   R   SEG=?PR?_SLEEP?OS
+?C0058. . . . . . . . . . . . . .  C ADDR   0003H   R   SEG=?PR?_ADDTASK?OS
+?C0060. . . . . . . . . . . . . .  C ADDR   0033H   R   SEG=?PR?_ADDTASK?OS
+?C0062. . . . . . . . . . . . . .  C ADDR   003BH   R   SEG=?PR?_ADDTASK?OS
+?C0063. . . . . . . . . . . . . .  C ADDR   002CH   R   SEG=?PR?_FREE?OS
+?C0064. . . . . . . . . . . . . .  C ADDR   003BH   R   SEG=?PR?_GC_MODIFYHEAPMANAGERUNITS?OS
+?C0065. . . . . . . . . . . . . .  C ADDR   0034H   R   SEG=?PR?_GC_MOVEBYTES?OS
+?C0066. . . . . . . . . . . . . .  C ADDR   0011H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0067. . . . . . . . . . . . . .  C ADDR   0090H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0068. . . . . . . . . . . . . .  C ADDR   00A2H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0069. . . . . . . . . . . . . .  C ADDR   00BDH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0070. . . . . . . . . . . . . .  C ADDR   00CFH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0071. . . . . . . . . . . . . .  C ADDR   00FDH   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C0072. . . . . . . . . . . . . .  C ADDR   0120H   R   SEG=?PR?OS_TASKDISPATCH?OS
+?C?CSTPTR . . . . . . . . . . . .  C ADDR   -----       EXT
+?C?ILDPTR . . . . . . . . . . . .  C ADDR   -----       EXT
+?C?ISTPTR . . . . . . . . . . . .  C ADDR   -----       EXT
+?C?OFFXADD. . . . . . . . . . . .  C ADDR   -----       EXT
+?DT?_FREE?OS. . . . . . . . . . .  D SEG    0003H       REL=UNIT
+?DT?_GC_MODIFYHEAPMANAGERUNITS?OS  D SEG    0003H       REL=UNIT
+?DT?_GC_MOVEBYTES?OS. . . . . . .  D SEG    0002H       REL=UNIT
+?DT?_MALLOC?OS. . . . . . . . . .  D SEG    0004H       REL=UNIT
+?PR?GC?OS . . . . . . . . . . . .  C SEG    0062H       REL=UNIT
+?PR?LOCK?OS . . . . . . . . . . .  C SEG    0003H       REL=UNIT
+?PR?OS_MAIN?OS. . . . . . . . . .  C SEG    000AH       REL=UNIT
+?PR?OS_TASKDISPATCH?OS. . . . . .  C SEG    0141H       REL=UNIT
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    22
 
-I. . . . . . . . . . .  D ADDR   0043H   A   
-IE . . . . . . . . . .  D ADDR   00A8H   A   
-IE0. . . . . . . . . .  B ADDR   0088H.1 A   
-IE1. . . . . . . . . .  B ADDR   0088H.3 A   
-INT0 . . . . . . . . .  B ADDR   00B0H.2 A   
-INT1 . . . . . . . . .  B ADDR   00B0H.3 A   
-IP . . . . . . . . . .  D ADDR   00B8H   A   
-IT0. . . . . . . . . .  B ADDR   0088H.0 A   
-IT1. . . . . . . . . .  B ADDR   0088H.2 A   
-ITRPT_COUNT. . . . . .  D ADDR   0031H   A   
-OS . . . . . . . . . .  N NUMB   -----       
-OS_MAIN. . . . . . . .  C ADDR   0000H   R   SEG=?PR?OS_MAIN?OS
-OS_TASKDISPATCH. . . .  C ADDR   0000H   R   SEG=?PR?OS_TASKDISPATCH?OS
-OS_TASKRECOVER . . . .  C ADDR   0000H   R   SEG=?PR?OS_TASKRECOVER?OS
-OV . . . . . . . . . .  B ADDR   00D0H.2 A   
-P. . . . . . . . . . .  B ADDR   00D0H.0 A   
-P0 . . . . . . . . . .  D ADDR   0080H   A   
-P1 . . . . . . . . . .  D ADDR   0090H   A   
-P2 . . . . . . . . . .  D ADDR   00A0H   A   
-P3 . . . . . . . . . .  D ADDR   00B0H   A   
-PCON . . . . . . . . .  D ADDR   0087H   A   
-PS . . . . . . . . . .  B ADDR   00B8H.4 A   
-PSW. . . . . . . . . .  D ADDR   00D0H   A   
-PT0. . . . . . . . . .  B ADDR   00B8H.1 A   
-PT1. . . . . . . . . .  B ADDR   00B8H.3 A   
-PT2. . . . . . . . . .  B ADDR   00B8H.5 A   
-PTAK_RM_STK. . . . . .  D ADDR   0032H   A   
-PX0. . . . . . . . . .  B ADDR   00B8H.0 A   
-PX1. . . . . . . . . .  B ADDR   00B8H.2 A   
-P_JCB. . . . . . . . .  D ADDR   0034H   A   
-RB8. . . . . . . . . .  B ADDR   0098H.2 A   
-RCAP2H . . . . . . . .  D ADDR   00CBH   A   
-RCAP2L . . . . . . . .  D ADDR   00CAH   A   
-RCLK . . . . . . . . .  B ADDR   00C8H.5 A   
-RD . . . . . . . . . .  B ADDR   00B0H.7 A   
-REN. . . . . . . . . .  B ADDR   0098H.4 A   
-RI . . . . . . . . . .  B ADDR   0098H.0 A   
-RN_TASK_IDX. . . . . .  D ADDR   0030H   A   
-RS0. . . . . . . . . .  B ADDR   00D0H.3 A   
-RS1. . . . . . . . . .  B ADDR   00D0H.4 A   
-RXD. . . . . . . . . .  B ADDR   00B0H.0 A   
-SBUF . . . . . . . . .  D ADDR   0099H   A   
-SCON . . . . . . . . .  D ADDR   0098H   A   
-SM0. . . . . . . . . .  B ADDR   0098H.7 A   
-SM1. . . . . . . . . .  B ADDR   0098H.6 A   
-SM2. . . . . . . . . .  B ADDR   0098H.5 A   
-SP . . . . . . . . . .  D ADDR   0081H   A   
-T0 . . . . . . . . . .  B ADDR   00B0H.4 A   
-T1 . . . . . . . . . .  B ADDR   00B0H.5 A   
-T2 . . . . . . . . . .  B ADDR   0090H.0 A   
-T2CON. . . . . . . . .  D ADDR   00C8H   A   
-T2EX . . . . . . . . .  B ADDR   0090H.1 A   
-TB8. . . . . . . . . .  B ADDR   0098H.3 A   
-TCLK . . . . . . . . .  B ADDR   00C8H.4 A   
-TCON . . . . . . . . .  D ADDR   0088H   A   
-TF0. . . . . . . . . .  B ADDR   0088H.5 A   
-TF1. . . . . . . . . .  B ADDR   0088H.7 A   
-TF2. . . . . . . . . .  B ADDR   00C8H.7 A   
-TH0. . . . . . . . . .  D ADDR   008CH   A   
-TH1. . . . . . . . . .  D ADDR   008DH   A   
-TH2. . . . . . . . . .  D ADDR   00CDH   A   
-TI . . . . . . . . . .  B ADDR   0098H.1 A   
-TL0. . . . . . . . . .  D ADDR   008AH   A   
-TL1. . . . . . . . . .  D ADDR   008BH   A   
-TL2. . . . . . . . . .  D ADDR   00CCH   A   
-TMOD . . . . . . . . .  D ADDR   0089H   A   
-A51 MACRO ASSEMBLER  OS                                                                   02/19/2020 19:30:19 PAGE    12
+?PR?OS_TASKRECOVER?OS . . . . . .  C SEG    000FH       REL=UNIT
+?PR?UNLOCK?OS . . . . . . . . . .  C SEG    0003H       REL=UNIT
+?PR?YIELD?OS. . . . . . . . . . .  C SEG    0007H       REL=UNIT
+?PR?_ADDTASK?OS . . . . . . . . .  C SEG    003CH       REL=UNIT
+?PR?_FREE?OS. . . . . . . . . . .  C SEG    0081H       REL=UNIT
+?PR?_GC_MODIFYHEAPMANAGERUNITS?OS  C SEG    0055H       REL=UNIT
+?PR?_GC_MOVEBYTES?OS. . . . . . .  C SEG    0037H       REL=UNIT
+?PR?_GETDATAMEMORYUNIT?OS . . . .  C SEG    0006H       REL=UNIT
+?PR?_GETXDATAMEMORYUNIT?OS. . . .  C SEG    0007H       REL=UNIT
+?PR?_MALLOC?OS. . . . . . . . . .  C SEG    0065H       REL=UNIT
+?PR?_SLEEP?OS . . . . . . . . . .  C SEG    0012H       REL=UNIT
+?_FREE?BYTE . . . . . . . . . . .  D ADDR   0000H   R   SEG=?DT?_FREE?OS
+?_GC_MODIFYHEAPMANAGERUNITS?BYTE.  D ADDR   0000H   R   SEG=?DT?_GC_MODIFYHEAPMANAGERUNITS?OS
+?_GC_MOVEBYTES?BYTE . . . . . . .  D ADDR   0000H   R   SEG=?DT?_GC_MOVEBYTES?OS
+?_MALLOC?BYTE . . . . . . . . . .  D ADDR   0000H   R   SEG=?DT?_MALLOC?OS
+AC. . . . . . . . . . . . . . . .  B ADDR   00D0H.6 A   
+ACC . . . . . . . . . . . . . . .  D ADDR   00E0H   A   
+ADDRESS_THRESHOLD?443 . . . . . .  D ADDR   0000H   R   SEG=?DT?_GC_MODIFYHEAPMANAGERUNITS?OS
+ADDTASKS. . . . . . . . . . . . .  C ADDR   -----       EXT
+B . . . . . . . . . . . . . . . .  D ADDR   00F0H   A   
+CACHE_ACC . . . . . . . . . . . .  D ADDR   0040H   A   
+CACHE_PX_UCHAR1 . . . . . . . . .  D ADDR   004AH   A   
+CACHE_PX_UINT1. . . . . . . . . .  D ADDR   004CH   A   
+CACHE_TASKENTER_H . . . . . . . .  D ADDR   0042H   A   
+CACHE_TASKENTER_L . . . . . . . .  D ADDR   0041H   A   
+CACHE_UCHAR1. . . . . . . . . . .  D ADDR   0043H   A   
+CACHE_UCHAR2. . . . . . . . . . .  D ADDR   0044H   A   
+CACHE_UCHAR3. . . . . . . . . . .  D ADDR   0045H   A   
+CACHE_UINT1 . . . . . . . . . . .  D ADDR   0046H   A   
+CACHE_UINT2 . . . . . . . . . . .  D ADDR   0048H   A   
+CP_RL2. . . . . . . . . . . . . .  B ADDR   00C8H.0 A   
+CY. . . . . . . . . . . . . . . .  B ADDR   00D0H.7 A   
+C_T2. . . . . . . . . . . . . . .  B ADDR   00C8H.1 A   
+DPH . . . . . . . . . . . . . . .  D ADDR   0083H   A   
+DPL . . . . . . . . . . . . . . .  D ADDR   0082H   A   
+EA. . . . . . . . . . . . . . . .  B ADDR   00A8H.7 A   
+END?546 . . . . . . . . . . . . .  D ADDR   0000H   R   SEG=?DT?_GC_MOVEBYTES?OS
+ES. . . . . . . . . . . . . . . .  B ADDR   00A8H.4 A   
+ET0 . . . . . . . . . . . . . . .  B ADDR   00A8H.1 A   
+ET1 . . . . . . . . . . . . . . .  B ADDR   00A8H.3 A   
+ET2 . . . . . . . . . . . . . . .  B ADDR   00A8H.5 A   
+EX0 . . . . . . . . . . . . . . .  B ADDR   00A8H.0 A   
+EX1 . . . . . . . . . . . . . . .  B ADDR   00A8H.2 A   
+EXEN2 . . . . . . . . . . . . . .  B ADDR   00C8H.3 A   
+EXF2. . . . . . . . . . . . . . .  B ADDR   00C8H.6 A   
+F0. . . . . . . . . . . . . . . .  B ADDR   00D0H.5 A   
+FREE_MEMORY . . . . . . . . . . .  D ADDR   0039H   A   
+GC. . . . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?GC?OS
+IE. . . . . . . . . . . . . . . .  D ADDR   00A8H   A   
+IE0 . . . . . . . . . . . . . . .  B ADDR   0088H.1 A   
+IE1 . . . . . . . . . . . . . . .  B ADDR   0088H.3 A   
+INT0. . . . . . . . . . . . . . .  B ADDR   00B0H.2 A   
+INT1. . . . . . . . . . . . . . .  B ADDR   00B0H.3 A   
+IP. . . . . . . . . . . . . . . .  D ADDR   00B8H   A   
+IT0 . . . . . . . . . . . . . . .  B ADDR   0088H.0 A   
+IT1 . . . . . . . . . . . . . . .  B ADDR   0088H.2 A   
+ITRPT_COUNT . . . . . . . . . . .  D ADDR   0031H   A   
+LENGTH?444. . . . . . . . . . . .  D ADDR   0002H   R   SEG=?DT?_GC_MODIFYHEAPMANAGERUNITS?OS
+LOCK. . . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?LOCK?OS
+OS. . . . . . . . . . . . . . . .  N NUMB   -----       
+OS_MAIN . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?OS_MAIN?OS
+OS_TASKDISPATCH . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?OS_TASKDISPATCH?OS
+OS_TASKRECOVER. . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?OS_TASKRECOVER?OS
+OV. . . . . . . . . . . . . . . .  B ADDR   00D0H.2 A   
+P . . . . . . . . . . . . . . . .  B ADDR   00D0H.0 A   
+P0. . . . . . . . . . . . . . . .  D ADDR   0080H   A   
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    23
 
-TR0. . . . . . . . . .  B ADDR   0088H.4 A   
-TR1. . . . . . . . . .  B ADDR   0088H.6 A   
-TR2. . . . . . . . . .  B ADDR   00C8H.2 A   
-TXD. . . . . . . . . .  B ADDR   00B0H.1 A   
-WR . . . . . . . . . .  B ADDR   00B0H.6 A   
-_ADDTASK . . . . . . .  C ADDR   0000H   R   SEG=?PR?_ADDTASK?OS
-_SLEEP . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_SLEEP?OS
+P1. . . . . . . . . . . . . . . .  D ADDR   0090H   A   
+P2. . . . . . . . . . . . . . . .  D ADDR   00A0H   A   
+P3. . . . . . . . . . . . . . . .  D ADDR   00B0H   A   
+P?141 . . . . . . . . . . . . . .  D ADDR   0001H   R   SEG=?DT?_MALLOC?OS
+P?242 . . . . . . . . . . . . . .  D ADDR   0000H   R   SEG=?DT?_FREE?OS
+PCON. . . . . . . . . . . . . . .  D ADDR   0087H   A   
+PS. . . . . . . . . . . . . . . .  B ADDR   00B8H.4 A   
+PSW . . . . . . . . . . . . . . .  D ADDR   00D0H   A   
+PT0 . . . . . . . . . . . . . . .  B ADDR   00B8H.1 A   
+PT1 . . . . . . . . . . . . . . .  B ADDR   00B8H.3 A   
+PT2 . . . . . . . . . . . . . . .  B ADDR   00B8H.5 A   
+PTAK_RM_STK . . . . . . . . . . .  D ADDR   0032H   A   
+PX0 . . . . . . . . . . . . . . .  B ADDR   00B8H.0 A   
+PX1 . . . . . . . . . . . . . . .  B ADDR   00B8H.2 A   
+P_HEAP. . . . . . . . . . . . . .  D ADDR   0037H   A   
+P_HEAPMANAGER . . . . . . . . . .  D ADDR   0035H   A   
+P_JCB . . . . . . . . . . . . . .  D ADDR   0034H   A   
+RB8 . . . . . . . . . . . . . . .  B ADDR   0098H.2 A   
+RCAP2H. . . . . . . . . . . . . .  D ADDR   00CBH   A   
+RCAP2L. . . . . . . . . . . . . .  D ADDR   00CAH   A   
+RCLK. . . . . . . . . . . . . . .  B ADDR   00C8H.5 A   
+RD. . . . . . . . . . . . . . . .  B ADDR   00B0H.7 A   
+REN . . . . . . . . . . . . . . .  B ADDR   0098H.4 A   
+RI. . . . . . . . . . . . . . . .  B ADDR   0098H.0 A   
+RN_TASK_IDX . . . . . . . . . . .  D ADDR   0030H   A   
+RS0 . . . . . . . . . . . . . . .  B ADDR   00D0H.3 A   
+RS1 . . . . . . . . . . . . . . .  B ADDR   00D0H.4 A   
+RXD . . . . . . . . . . . . . . .  B ADDR   00B0H.0 A   
+SBUF. . . . . . . . . . . . . . .  D ADDR   0099H   A   
+SCON. . . . . . . . . . . . . . .  D ADDR   0098H   A   
+SIZE_T?140. . . . . . . . . . . .  D ADDR   0000H   R   SEG=?DT?_MALLOC?OS
+SM0 . . . . . . . . . . . . . . .  B ADDR   0098H.7 A   
+SM1 . . . . . . . . . . . . . . .  B ADDR   0098H.6 A   
+SM2 . . . . . . . . . . . . . . .  B ADDR   0098H.5 A   
+SP. . . . . . . . . . . . . . . .  D ADDR   0081H   A   
+T0. . . . . . . . . . . . . . . .  B ADDR   00B0H.4 A   
+T1. . . . . . . . . . . . . . . .  B ADDR   00B0H.5 A   
+T2. . . . . . . . . . . . . . . .  B ADDR   0090H.0 A   
+T2CON . . . . . . . . . . . . . .  D ADDR   00C8H   A   
+T2EX. . . . . . . . . . . . . . .  B ADDR   0090H.1 A   
+TB8 . . . . . . . . . . . . . . .  B ADDR   0098H.3 A   
+TCLK. . . . . . . . . . . . . . .  B ADDR   00C8H.4 A   
+TCON. . . . . . . . . . . . . . .  D ADDR   0088H   A   
+TF0 . . . . . . . . . . . . . . .  B ADDR   0088H.5 A   
+TF1 . . . . . . . . . . . . . . .  B ADDR   0088H.7 A   
+TF2 . . . . . . . . . . . . . . .  B ADDR   00C8H.7 A   
+TH0 . . . . . . . . . . . . . . .  D ADDR   008CH   A   
+TH1 . . . . . . . . . . . . . . .  D ADDR   008DH   A   
+TH2 . . . . . . . . . . . . . . .  D ADDR   00CDH   A   
+TI. . . . . . . . . . . . . . . .  B ADDR   0098H.1 A   
+TL0 . . . . . . . . . . . . . . .  D ADDR   008AH   A   
+TL1 . . . . . . . . . . . . . . .  D ADDR   008BH   A   
+TL2 . . . . . . . . . . . . . . .  D ADDR   00CCH   A   
+TMOD. . . . . . . . . . . . . . .  D ADDR   0089H   A   
+TR0 . . . . . . . . . . . . . . .  B ADDR   0088H.4 A   
+TR1 . . . . . . . . . . . . . . .  B ADDR   0088H.6 A   
+TR2 . . . . . . . . . . . . . . .  B ADDR   00C8H.2 A   
+TXD . . . . . . . . . . . . . . .  B ADDR   00B0H.1 A   
+UNLOCK. . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?UNLOCK?OS
+WR. . . . . . . . . . . . . . . .  B ADDR   00B0H.6 A   
+YIELD . . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?YIELD?OS
+_ADDTASK. . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_ADDTASK?OS
+_FREE . . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_FREE?OS
+_GC_MODIFYHEAPMANAGERUNITS. . . .  C ADDR   0000H   R   SEG=?PR?_GC_MODIFYHEAPMANAGERUNITS?OS
+_GC_MOVEBYTES . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_GC_MOVEBYTES?OS
+_GETDATAMEMORYUNIT. . . . . . . .  C ADDR   0000H   R   SEG=?PR?_GETDATAMEMORYUNIT?OS
+A51 MACRO ASSEMBLER  OS                                                                   02/22/2020 23:24:37 PAGE    24
+
+_GETXDATAMEMORYUNIT . . . . . . .  C ADDR   0000H   R   SEG=?PR?_GETXDATAMEMORYUNIT?OS
+_MALLOC . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_MALLOC?OS
+_SLEEP. . . . . . . . . . . . . .  C ADDR   0000H   R   SEG=?PR?_SLEEP?OS
 
 
 REGISTER BANK(S) USED: 0 

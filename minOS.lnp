@@ -1,6 +1,0 @@
-"main.obj",
-"os.obj",
-"tasks.obj",
-"..\..\c51v952\C51\LIB\C51S.LIB" 
-TO "minOS" 
-RAMSIZE(256) 

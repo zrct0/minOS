@@ -218,7 +218,7 @@
               <RCB>
                 <Type>0</Type>
                 <StartAddress>0x0</StartAddress>
-                <Size>0x10000</Size>
+                <Size>0xffff</Size>
               </RCB>
               <RXB>
                 <Type>0</Type>
@@ -286,7 +286,7 @@
             <RegisterColoring>0</RegisterColoring>
             <VariablesInOrder>0</VariablesInOrder>
             <IntegerPromotion>1</IntegerPromotion>
-            <uAregs>0</uAregs>
+            <uAregs>1</uAregs>
             <UseInterruptVector>1</UseInterruptVector>
             <Fuzzy>3</Fuzzy>
             <Optimize>8</Optimize>
@@ -323,7 +323,7 @@
             <DataOverlaying>1</DataOverlaying>
             <OverlayString></OverlayString>
             <MiscControls></MiscControls>
-            <DisableWarningNumbers></DisableWarningNumbers>
+            <DisableWarningNumbers>16</DisableWarningNumbers>
             <LinkerCmdFile></LinkerCmdFile>
             <Assign></Assign>
             <ReserveString></ReserveString>
@@ -415,6 +415,26 @@
               <FileName>C51S.LIB</FileName>
               <FileType>4</FileType>
               <FilePath>..\..\c51v952\C51\LIB\C51S.LIB</FilePath>
+            </File>
+            <File>
+              <FileName>LCD1602.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\LCD1602.h</FilePath>
+            </File>
+            <File>
+              <FileName>LCD1602.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\LCD1602.c</FilePath>
+            </File>
+            <File>
+              <FileName>minlib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\minlib.c</FilePath>
+            </File>
+            <File>
+              <FileName>minlib.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\minlib.h</FilePath>
             </File>
           </Files>
         </Group>

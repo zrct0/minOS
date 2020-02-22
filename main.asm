@@ -3,7 +3,7 @@
 	EXTRN CODE(OS_TaskRecover)
 	D_RN_TASK_IDX DATA 30H;当前任务下标	
 	D_ITRPT_COUNT DATA 31H;中断次数	
-	D_pTAK_RM_STK DATA 33H;任务RAM栈指针			
+	D_pTAK_RM_STK DATA 33H;任务RAM栈指针	
 		
 	C_TASKs_RAM_S EQU 0000H;任务RAM起始地址		
 	C_MAIN_SP_SRT EQU 70H;默认栈数据起始地址	
@@ -65,8 +65,9 @@ PushTaskData:
 Timer0Interrupt: 
     MOV TH0,#00H
     MOV TL0,#00H
-	;切换寄存器组到第0区
-	CLR RS0	    
+	;切换寄存器组到第3区
+	SETB RS0
+	SETB RS1
 	INC D_ITRPT_COUNT;中断次数++	
 	MOV D_pTAK_RM_STK, #00H;对任务数据栈指针清0
 	;当前ACC入任务栈保护
